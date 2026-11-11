@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 2
+  tags:
+  - Fog
+  - Mask
+  - Terrain
+  - Resource
+  - ResourceManager
+  - Troop
+  - Build
+  - MinimapTerrain
+  - FogMinimap
+  - ColorMinimap
+  - Vision
+  - HealthBar
+  - TargetSpawn
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - Terrain
+  - Water
+  - UI
+  - FogGrey
+  - FogTransparent
+  - Fog
+  - Mask
+  - Minimap
+  - Troop
+  - FogGreyMinimap
+  - FogTransparentMinimap
+  - Build
+  - Placeable
+  - NoPlaceable
+  - FogMinimap
+  - Resource
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  - 
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0
