@@ -71,7 +71,8 @@ namespace Redbaron.EditorTools
             c.shipStats = new[]
             {
                 S("Energía", "6 impactos"), S("Munición", "80 balas"), S("Bombas", "4"), S("Velocidad", "11 a 26 m/s"),
-                S("Alabeo", "150°/s"), S("Giro máximo", "65°/s"), S("Cadencia", "una ráfaga cada 0,4 s"),
+                S("Alabeo", "150°/s"), S("Giro máximo", "65°/s"), S("Cadencia", "una ráfaga cada 0,5 s"),
+                S("Bala", "96 m/s más la velocidad del avión"), S("Choque", "−2 de energía, y 1,5 s sin más daño por choques"),
             };
             c.shipStatsNote = "En la batalla todas las naves vuelan igual por ahora: lo que cambia es el modelo.";
 
@@ -86,8 +87,15 @@ namespace Redbaron.EditorTools
                 new RedbaronCatalog.Building
                 {
                     name = "Casamata", model = RedbaronCatalog.BuildingModel.Bunker, count = "Seis por bando",
-                    stats = new[] { S("Resistencia", "20"), S("Daño por bomba", "6 (a menos de 8 m)"), S("Arma", "ametralladora"), S("Alcance", "42 m"), S("Ráfaga", "2 disparos cada 1,4 s") },
+                    stats = new[] { S("Resistencia", "20"), S("Daño por bomba", "6 (a menos de 8 m)"), S("Arma", "ametralladora"), S("Alcance", "42 m"), S("Ráfaga", "2 disparos cada 1,75 s") },
                     description = "Nido de ametralladora de hormigón con sacos terreros. Dispara a la infantería enemiga que se acerca; cuatro bombas bien puestas lo destruyen.",
+                },
+                new RedbaronCatalog.Building
+                {
+                    name = "Torre antiaérea", model = RedbaronCatalog.BuildingModel.FlakTower, count = "Una por bando",
+                    prefab = AssetDatabase.LoadAssetAtPath<GameObject>(Root + "/Edificios/Torre_Flak.obj"),
+                    stats = new[] { S("Resistencia", "18"), S("Daño por bomba", "6 (a menos de 8 m)"), S("Arma", "cañón antiaéreo"), S("Alcance", "60 m"), S("Cadencia", "un proyectil cada 2,5 s"), S("Explosión", "5 m alrededor del avión, −1 de energía") },
+                    description = "Junto al puesto de mando. Dispara a los aviones enemigos que se acercan, sin adelantarse a su movimiento: el proyectil estalla donde estaba el avión, así que un avión rápido escapa y uno lento o que gira cae en la explosión. Los aviones pasan por encima; tres bombas la destruyen.",
                 },
                 new RedbaronCatalog.Building
                 {

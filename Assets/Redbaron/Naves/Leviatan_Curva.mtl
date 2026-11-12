@@ -1,4 +1,4 @@
-# Leviatan_Curva · materiales
+# Leviatan · materiales
 newmtl Oliva
 Kd 0.10871 0.14498 0.04454 # srgb 0.3647 0.4157 0.2431
 Ka 0 0 0
@@ -63,22 +63,6 @@ Ns 10
 d 1
 illum 2
 
-newmtl Crema
-Kd 0.84339 0.79699 0.65232 # srgb 0.9255 0.9020 0.8235
-Ka 0 0 0
-Ks 0.000 0.000 0.000
-Ns 20
-d 1
-illum 2
-
-newmtl Negro
-Kd 0.00775 0.00659 0.00503 # srgb 0.1098 0.1020 0.0902
-Ka 0 0 0
-Ks 0.100 0.100 0.100
-Ns 60
-d 1
-illum 2
-
 newmtl Goma
 Kd 0.01891 0.01700 0.01517 # srgb 0.1647 0.1569 0.1490
 Ka 0 0 0
@@ -92,6 +76,46 @@ Kd 0.19749 0.00775 0.00456 # srgb 0.4784 0.1098 0.0863
 Ka 0 0 0
 Ks 0.000 0.000 0.000
 Ns 40
+d 1
+illum 2
+
+newmtl EscA
+Kd 0.02422 0.07592 0.25905 # srgb 0.1843 0.3098 0.5412
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 40
+d 1
+illum 2
+
+newmtl EscFondo
+Kd 0.84339 0.79699 0.65232 # srgb 0.9255 0.9020 0.8235
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl EscB
+Kd 0.37359 0.01606 0.00970 # srgb 0.6392 0.1529 0.1216
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 40
+d 1
+illum 2
+
+newmtl CruzFondo
+Kd 0.84339 0.79699 0.65232 # srgb 0.9255 0.9020 0.8235
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl CruzA
+Kd 0.00775 0.00659 0.00503 # srgb 0.1098 0.1020 0.0902
+Ka 0 0 0
+Ks 0.100 0.100 0.100
+Ns 60
 d 1
 illum 2
 

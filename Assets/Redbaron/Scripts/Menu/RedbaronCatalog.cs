@@ -32,13 +32,15 @@ namespace Redbaron
             [TextArea(2, 5)] public string description;
         }
 
-        public enum BuildingModel { CommandPost, Bunker, Hangar, RefillPoint }
+        public enum BuildingModel { CommandPost, Bunker, Hangar, RefillPoint, FlakTower }
 
         [Serializable]
         public class Building
         {
             public string name;
             public BuildingModel model;
+            [Tooltip("A model to show instead of the one built in code (the anti-aircraft tower uses Torre_Flak).")]
+            public GameObject prefab;
             [Tooltip("How many there are, e.g. \"Uno por bando\".")]
             public string count;
             public Stat[] stats;

@@ -435,3 +435,72 @@ Settings in RedbaronMapBuilder → Boundary wall:
 | Wall Boulder Count | 70 | |
 
 The rocks use their own random sequence, so trees, craters and trenches stay where they were.
+
+## Side colours (added 2026-11-12)
+
+The hangar ships come from `Redbaron_Color (1).zip`, the Redbaron colour kit. Each ship is a single model, painted at runtime by the kit's `PaletaColor` script, which is in `Scripts/Color` with `TemaColor`.
+
+**Colours by side.** TeamLivery picks the theme for each plane:
+
+| Who | Theme | Insignia |
+|---|---|---|
+| Entente | Naval: navy blue #2F4F8A, light grey canvas | Roundel |
+| Central Powers | Verde: green #3F6B3A, khaki canvas | Cross |
+| Your plane | Barón Rojo: red #B32418 | Your side's roundel, in your side's colours |
+
+- **Insignias:** every ship carries both insignias (`Insignia_Escarapela` and `Insignia_Cruz`), and the script switches on the one for its side.
+- **Grain:** `PaletaColor` switches the materials to the kit's `Redbaron/LowPolyGrano` shader. Paint, metal, wood, canvas and stone each get their own grain. The shader is in Graphics Settings → Always Included Shaders, so it is also in the phone build.
+- **Other places:** the menu cards show each ship in the colours of the side it was designed for. Flags, HUD bars and the side names in the menu use the same green and navy.
+
+**Changes to the copies in the project.** These are the same as for the first hangar zip:
+- The files keep their old names, so the scene and the catalog still find them. In the zip, the curved ships are named `X` and the straight ones `X_Recta`; in the project they are `X_Curva` and `X`.
+- `o` objects became `g` groups.
+- The MTL `Kd` colours were converted to linear (value^2.2, the original kept in a comment).
+
+## Collisions (added 2026-11-12)
+
+A collision no longer destroys a plane outright. This covers a tree crown, a mountain, a building, the rock wall and another plane.
+
+- **Damage:** each collision costs 2 energy points (Collision Damage), and a plane goes down when its energy runs out.
+- **Push:** the plane is pushed clear at 16 m/s, fading over 0.6 s (Push Speed, Push Time). The push only moves the plane, so you still have to turn away. While it lasts, the plane cannot move back into what it hit.
+- **Immunity:** for 1.5 s after a collision (Collision Grace), further collisions do no damage. The plane is still pushed out of anything it touches, so it never passes through.
+- **Mid-air:** in a collision between two planes, both are pushed apart and both lose energy.
+- **Trees:** a tree that is hit still falls.
+- **Log:** the battle log says "choca contra …" for each collision and "se estrella contra …" when one brings the plane down.
+
+All fields are on BiplaneAI → Collisions.
+
+## Anti-aircraft towers (added 2026-11-12)
+
+Each side has an anti-aircraft tower beside its command post, at design position (64, 8) and its mirror. The model is `Torre_Flak` from the colour kit, in `Assets/Redbaron/Edificios`, painted in its side's colours.
+
+- **Size:** AirWar builds the towers after the flight plane is known, scaled so that their top is 1.6 m below it (Flak Tower Clearance). Planes therefore fly over them, and the towers do not raise the flight plane.
+- **Firing:** every 2.5 s the tower fires at the nearest enemy plane within 60 m that it can see. The turret turns at 80°/s and fires only when it points within 5° of the plane.
+- **Bursts:** the shell bursts at the plane's distance at the moment of firing, with 2.5 m of scatter, on the flight plane. A plane whose edge is within 5 m of the burst loses one energy point.
+- **No lead:** the tower aims at where the plane is, so a fast plane flying straight is usually gone before the burst, and a slow or turning one gets caught.
+- **Damage:** a tower has 18 points, and a bomb does 6 within 8 m, so three bombs destroy it. A new battle restores it.
+
+The settings are on AirWar → Anti-aircraft towers (model, spots, clearance) and on each tower's FlakTower component (range, cadence, shell speed, burst radius, scatter).
+
+## Fire rates and no aim assist (added 2026-11-12)
+
+**Fire rates.** Every gun fires 20 % more slowly, and plane rounds fly 20 % more slowly:
+
+| Who | Now | Before | Field |
+|---|---|---|---|
+| Your plane | 1 burst every 0.5 s | 0.4 s | BiplaneAI → Player Fire Cooldown |
+| AI pilots | 1 burst every 2.75 s | 2.2 s | BiplaneAI → Fire Cooldown |
+| Plane rounds | 96 m/s plus the plane's speed | 120 m/s | BiplaneAI → Bullet Speed |
+| Riflemen | 1 shot every 3.25 s, plus up to 1 s | 2.6 s, plus up to 0.8 s | SoldierAI → Rifle Cooldown (also in both soldier prefabs) |
+| Bunkers | 1 burst every 1.75 s | 1.4 s | Bunker → Burst Every |
+
+**No aim assist.** Nothing aims for anyone:
+
+- **Your plane:** the rounds leave along the nose, with no correction towards a target. The yellow target box and the bomb sight are gone. The cockpit view keeps its small fixed sight on the nose.
+- **AI pilots:** they point at where the enemy is now, without computing a lead. They drop their bomb when the enemy airfield is 6 m ahead of the nose, without working out the fall, so a bomb may land long.
+- **Towers:** they do not lead their targets either.
+- **Riflemen and bunkers:** they had no aim assist; they still hit by chance, depending on distance and cover.
+
+One rule stays: everything in the air flies on one flight plane, so rounds and bursts never miss above or below.
+
+Some earlier sections describe the previous rules: the aim assist in "Flying your plane", the yellow bomb cross, planes going down on any collision, and red for the Central Powers. The sections above replace them.

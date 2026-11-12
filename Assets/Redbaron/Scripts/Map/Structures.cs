@@ -64,7 +64,7 @@ namespace Redbaron
     {
         public static readonly List<Bunker> All = new List<Bunker>();
         public float range = 42f;
-        public float burstEvery = 1.4f;
+        public float burstEvery = 1.75f; // 20 % slower than the first version's 1.4 s
         public int shotsPerBurst = 2;
         public float baseHit = 0.3f;
         public Health Health { get; private set; }

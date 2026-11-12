@@ -210,7 +210,7 @@ namespace Redbaron
             foreach (var b in catalog.buildings)
             {
                 if (b == null) continue;
-                var kind = b.model;
+                var building = b;
                 cards.Add(new Card
                 {
                     title = b.name,
@@ -219,14 +219,21 @@ namespace Redbaron
                     accent = UiKit.Brass,
                     stats = b.stats,
                     description = b.description,
-                    model = () => BuildingModel(kind),
+                    model = () => BuildingModel(building),
                 });
             }
             return cards;
         }
 
-        GameObject BuildingModel(RedbaronCatalog.BuildingModel kind)
+        GameObject BuildingModel(RedbaronCatalog.Building building)
         {
+            var kind = building.model;
+            if (kind == RedbaronCatalog.BuildingModel.FlakTower && building.prefab != null)
+            {
+                var holder = new GameObject("Torre_antiaerea");
+                FlakTower.BuildDisplay(building.prefab, buildingSide, holder.transform, out _, out _, out _, out _);
+                return holder;
+            }
             if (kind == RedbaronCatalog.BuildingModel.RefillPoint)
             {
                 var holder = new GameObject("Punto_de_recarga");

@@ -803,6 +803,10 @@ MonoBehaviour:
   aiEngine: {fileID: 8300000, guid: 7e7b0c25fa3a1bf4aa9f5e3ba907f49d, type: 3}
   cockpitEngine: {fileID: 8300000, guid: 06ad1481583af784ea25643fd04c15bc, type: 3}
   refillIcons: 1
+  flakTowerModel: {fileID: 919132149155446097, guid: d01b5ca0f521d4a1e8003ce88f66bfc6, type: 3}
+  flakTowerSpots:
+  - {x: 64, y: 8}
+  flakTowerClearance: 1.6
 --- !u!114 &1682496125
 MonoBehaviour:
   m_ObjectHideFlags: 0

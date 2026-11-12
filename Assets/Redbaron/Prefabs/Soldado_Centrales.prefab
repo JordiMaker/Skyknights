@@ -155,7 +155,7 @@ MonoBehaviour:
   walkSpeed: 2.6
   runSpeed: 3.6
   rifleRange: 50
-  rifleCooldown: 2.6
+  rifleCooldown: 3.25
   baseHit: 0.55
   coverSearchRadius: 16
   orderCoverRadius: 6

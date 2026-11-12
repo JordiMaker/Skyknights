@@ -41,8 +41,10 @@ namespace Redbaron
         [Header("Combate")]
         public float maxHp = 6;
         public float gunRange = 55f;
-        public float fireCooldown = 2.2f;
-        public float bulletSpeed = 120f;
+        [Tooltip("AI pilots: time between bursts (s). 2.75 = 20 % slower than the first version's 2.2.")]
+        public float fireCooldown = 2.75f;
+        [Tooltip("Muzzle speed of the rounds, added to the plane's own speed (m/s). 96 = 20 % slower than the first version's 120.")]
+        public float bulletSpeed = 96f;
         public float respawnDelay = 6f;
         public Material material;
         [Tooltip("Rounds carried (each burst fires two). Refilled at your airfield's floating icon.")]
@@ -75,10 +77,17 @@ namespace Redbaron
         public float minSpeed = 11f, maxSpeed = 26f;
         [Tooltip("Speed change per second while you hold up or down (m/s²).")]
         public float throttleRate = 7f;
-        [Tooltip("Time between bursts while the trigger is held (s).")]
-        public float playerFireCooldown = 0.4f;
-        [Tooltip("Aim assist: enemy planes and soldiers within this angle of the nose (degrees) and gun range, and not hidden, are aimed at.")]
-        public float aimAssistAngle = 14f;
+        [Tooltip("Time between bursts while the trigger is held (s). 0.5 = 20 % slower than the first version's 0.4. There is no aim assist: rounds fly where the nose points.")]
+        public float playerFireCooldown = 0.5f;
+
+        [Header("Collisions")]
+        [Tooltip("Energy a collision costs: with a tree crown, a mountain, a building, the rock wall or another plane. The plane only goes down when its energy runs out.")]
+        public float collisionDamage = 2f;
+        [Tooltip("After a collision the plane cannot be hurt by another collision for this long (s), so one impact never counts twice while it gets clear.")]
+        public float collisionGrace = 1.5f;
+        [Tooltip("Speed of the push that throws the plane clear of what it hit (m/s). It fades out over Push Time.")]
+        public float pushSpeed = 16f;
+        public float pushTime = 0.6f;
         [Tooltip("Models picked at random every time the plane spawns. Empty = Visual Prefab, or the built biplane.")]
         public GameObject[] modelPool;
         [Tooltip("Also pick among the kit's built biplanes (Camel, Fokker triplane, Albatros).")]
@@ -101,9 +110,10 @@ namespace Redbaron
         /// <summary>Bank angle in degrees, -180..180; positive = right wing down.</summary>
         public float Bank { get; private set; }
         public float CurrentSpeed { get; private set; }
-        public bool HasAimTarget { get; private set; }
-        public Vector3 AimPoint { get; private set; }
         public float RespawnIn => Alive ? 0 : Mathf.Max(0, wait);
+        /// <summary>True for a moment after a collision: another collision does no damage (the plane is still pushed clear).</summary>
+        public bool CollisionImmune => Time.time < graceUntil;
+        float graceUntil = -10f;
 
         public bool Alive { get; private set; }
         public bool HasBomb { get; private set; }
@@ -232,7 +242,7 @@ namespace Redbaron
             if (HasPool) PickRandomModel();
             Hp = maxHp; HasBomb = true; cd = 1.5f; Alive = true; smokeT = 0;
             Ammo = maxAmmo; Bombs = maxBombs; bombCd = 0;
-            Bank = 0; HasAimTarget = false;
+            Bank = 0; graceUntil = -10f;
             CurrentSpeed = Body.Speed;
             visual.gameObject.SetActive(true);
             lastYaw = Body.Yaw;
@@ -288,19 +298,15 @@ namespace Redbaron
             transform.rotation = Quaternion.LookRotation(fwd) * Quaternion.Euler(0, 0, Mathf.Clamp(-turnRate * 0.7f, -0.8f, 0.8f) * Mathf.Rad2Deg);
             if (prop != null) prop.Rotate(0, 0, dt * 2600f, Space.Self);
 
-            // Choque
-            float ground = ObstacleHeight(pos.x, pos.z, out Collider under);
-            if (pos.y - 0.42f < ground) { Crash(under, pos); return; }
-            if (MidAirCollision(pos)) return;
+            // Collisions cost energy and push the plane clear
+            if (CheckCollisions(pos)) return;
 
-            // Bomba: recarga en el aeródromo propio, suelta sobre el enemigo
+            // Bomb: reloaded over its own airfield, dropped over the enemy's. No computed release point:
+            // the pilot lets go as the airfield comes under the nose, so the bomb may land long.
             var own = RedbaronMap.AirfieldWorldRect(team);
             var foe = RedbaronMap.AirfieldWorldRect(team.Enemy());
             if (!HasBomb && own.Contains(new Vector2(pos.x, pos.z))) HasBomb = true;
-            // From the flight plane a bomb falls for a while, so it is released earlier.
-            float lead = 6f;
-            if (OnFlightPlane) lead = Mathf.Max(6f, Body.Speed * 0.9f * Mathf.Sqrt(2f * Mathf.Max(0.5f, pos.y - ObstacleHeight(pos.x, pos.z)) / 9.81f));
-            Vector3 ahead = pos + new Vector3(fwd.x, 0, fwd.z).normalized * lead;
+            Vector3 ahead = pos + new Vector3(fwd.x, 0, fwd.z).normalized * 6f;
             if (HasBomb && foe.Contains(new Vector2(ahead.x, ahead.z))) DropBomb(pos, fwd);
 
             // Ametralladora
@@ -362,7 +368,7 @@ namespace Redbaron
             m.transform.localPosition = -b.center * k;
             BodyRadius = Mathf.Max(1.2f, 0.3f * Mathf.Max(b.size.x, b.size.z) * k);
 
-            bool teamParts = PaintTeam(rs, team, teamTint, out Color main);
+            bool teamParts = PaintTeam(m, team, playerControlled, teamTint, out Color main);
 
             // Moving parts (Helice_*, Rotor*, Ala_I/Ala_D) get their own pivot and spin with GiroPiezas.
             if (RepivotMovingParts(m.transform)) holder.AddComponent<GiroPiezas>();
@@ -377,31 +383,29 @@ namespace Redbaron
             return holder;
         }
 
-        /// <summary>Side colours: parts painted with the "Equipo" / "EquipoOscuro" materials take the side's colours
-        /// (Redbaron hangar ships). Models without them get a light team tint instead. Returns whether the model has team parts.</summary>
-        public static bool PaintTeam(Renderer[] rs, Team team, float teamTint, out Color main)
+        /// <summary>Side colours. Redbaron hangar ships (materials named by colour zone: "Equipo", "Lona", "EscA"…) are painted
+        /// with their side's theme and insignia (TeamLivery); the player's plane gets the Red Baron theme. Other models get
+        /// a light team tint instead. Returns whether the model has colour zones.</summary>
+        public static bool PaintTeam(GameObject model, Team team, bool player, float teamTint, out Color main)
         {
-            bool teamParts = false;
-            foreach (var r in rs) foreach (var mm in r.sharedMaterials) if (mm != null && mm.name.StartsWith("Equipo")) teamParts = true;
-            main = team == Team.Centrales ? new Color32(0xA3, 0x27, 0x1F, 255) : new Color32(0x2F, 0x4F, 0x8A, 255);
-            Color dark = team == Team.Centrales ? new Color32(0x7A, 0x1C, 0x16, 255) : new Color32(0x22, 0x38, 0x5F, 255);
+            var rs = model.GetComponentsInChildren<Renderer>(true);
+            foreach (var r in rs) r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            if (TeamLivery.HasZones(rs)) { main = TeamLivery.Apply(model, team, player); return true; }
+
+            main = team.FlagColor();
             Color tint = Color.Lerp(Color.white, team.FlagColor(), teamTint);
             var mpb = new MaterialPropertyBlock();
             foreach (var r in rs)
             {
-                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 var mats = r.sharedMaterials;
                 for (int i = 0; i < mats.Length; i++)
                 {
                     var mm = mats[i];
                     if (mm == null || !mm.HasProperty("_Color")) continue;
-                    Color c;
-                    if (teamParts) { if (mm.name.StartsWith("EquipoOscuro")) c = dark; else if (mm.name.StartsWith("Equipo")) c = main; else continue; }
-                    else c = mm.color * tint;
-                    r.GetPropertyBlock(mpb, i); mpb.SetColor("_Color", c); r.SetPropertyBlock(mpb, i);
+                    r.GetPropertyBlock(mpb, i); mpb.SetColor("_Color", mm.color * tint); r.SetPropertyBlock(mpb, i);
                 }
             }
-            return teamParts;
+            return false;
         }
 
         /// <summary>A hangar ship as a display model (for the menu's cards): painted in the side's colours,
@@ -418,7 +422,7 @@ namespace Redbaron
                 Bounds b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
                 m.transform.position -= b.center - holder.transform.position;
             }
-            PaintTeam(rs, team, 0.35f, out _);
+            PaintTeam(m, team, false, 0.35f, out _);
             if (RepivotMovingParts(m.transform)) holder.AddComponent<GiroPiezas>();
             return holder;
         }
@@ -450,8 +454,6 @@ namespace Redbaron
         }
 
         // ---------------------------------------------------------------- Player flight
-        float aimT;
-
         void UpdatePlayer(float dt)
         {
             if (PauseMenu.IsPaused) return; // no flying, firing or bombing while the pause panel is open
@@ -495,12 +497,8 @@ namespace Redbaron
             transform.rotation = Quaternion.LookRotation(fwd) * Quaternion.Euler(0, 0, -Bank);
             if (prop != null) prop.Rotate(0, 0, dt * 2600f, Space.Self);
 
-            float ground = ObstacleHeight(pos.x, pos.z, out Collider under);
-            if (pos.y - 0.42f < ground) { Crash(under, pos); return; }
-            if (MidAirCollision(pos)) return;
+            if (CheckCollisions(pos)) return;
 
-            aimT -= dt;
-            if (aimT <= 0) { aimT = 0.08f; FindAimTarget(pos, fwd.normalized); }
             cd -= dt;
             bombCd -= dt;
             if ((Input.GetKeyDown(KeyCode.X) || MobileFlightControls.BombPressed) && Bombs > 0 && bombCd <= 0)
@@ -508,44 +506,13 @@ namespace Redbaron
                 DropBomb(pos, fwd);
                 Bombs--; bombCd = playerBombCooldown;
             }
+            // No aim assist: the rounds leave along the nose.
             if (trigger && cd <= 0 && Ammo > 0)
             {
-                Vector3 dir = HasAimTarget ? (AimPoint - pos).normalized : fwd.normalized;
-                Fire(pos, dir, 0.018f);
+                Fire(pos, fwd.normalized, 0.018f);
                 cd = playerFireCooldown;
             }
             Smoke(pos, dt);
-        }
-
-        /// <summary>Aim assist: the enemy plane or soldier closest to the nose, in range and not hidden. Own troops are never chosen.</summary>
-        void FindAimTarget(Vector3 pos, Vector3 fwd)
-        {
-            HasAimTarget = false;
-            float cosMax = Mathf.Cos(aimAssistAngle * Mathf.Deg2Rad), range = gunRange * 1.3f, best = float.MaxValue;
-            float muzzle = bulletSpeed + CurrentSpeed;
-            void Consider(Vector3 p, Vector3 vel, Transform target, float bias)
-            {
-                Vector3 to = p - pos; float d = to.magnitude;
-                if (d < 3f || d > range) return;
-                float c = Vector3.Dot(to / d, fwd);
-                if (c < cosMax) return;
-                float score = (1f - c) * 300f + d * 0.01f + bias;
-                if (score >= best || !Combat.HasLineOfSight(pos, p, target)) return;
-                best = score; HasAimTarget = true; AimPoint = p + vel * (d / muzzle);
-            }
-            foreach (var e in All)
-            {
-                if (e == this || !e.Alive || e.team == team) continue;
-                Vector3 vel = new Vector3(Mathf.Sin(e.Body.Yaw) * e.Body.Speed, e.Body.VerticalSpeed, Mathf.Cos(e.Body.Yaw) * e.Body.Speed);
-                Consider(e.Body.Position, vel, e.transform, -0.5f);
-            }
-            if (!OnFlightPlane) // ground troops are not on the flight plane
-            foreach (var s in SoldierAI.All)
-            {
-                if (!s.Alive || s.team == team || s.Health == null) continue;
-                var ag = s.GetComponent<UnityEngine.AI.NavMeshAgent>();
-                Consider(s.Health.AimPoint, ag != null && ag.enabled ? ag.velocity : Vector3.zero, s.transform, 0f);
-            }
         }
 
         float Think(out BiplaneAI enemy, out float best, out bool hunting)
@@ -563,9 +530,7 @@ namespace Redbaron
             if (pickup != null && (Ammo <= 0 || Hp < maxHp * 0.35f)) tgt = pickup.transform.position; // refuel first
             else if (enemy != null && (best < 80 || !HasBomb))
             {
-                float lead = best / bulletSpeed;
-                Vector3 ep = enemy.Body.Position;
-                tgt = ep + new Vector3(Mathf.Sin(enemy.Body.Yaw), 0, Mathf.Cos(enemy.Body.Yaw)) * enemy.Body.Speed * lead;
+                tgt = enemy.Body.Position; // no computed lead: the pilot points at where the enemy is now
                 hunting = true;
             }
             else if (HasBomb) { var r = RedbaronMap.AirfieldWorldRect(team.Enemy()); tgt = new Vector3(r.center.x, 0, r.center.y); }
@@ -665,44 +630,11 @@ namespace Redbaron
                     GUI.color = Color.white;
                 }
             if (Alive) DrawAmmoCounter(w, hgt);
-
-            // Bomb sight: where a bomb dropped now would land.
-            if (Alive && Bombs > 0 && Camera.main != null)
-            {
-                Vector3 pos = Body.Position, fl = new Vector3(Mathf.Sin(Body.Yaw), 0, Mathf.Cos(Body.Yaw));
-                float tFall = 1f; Vector3 hit = pos;
-                for (int it = 0; it < 3; it++)
-                {
-                    float g = ObstacleHeight(hit.x, hit.z, out _);
-                    tFall = Mathf.Sqrt(2f * Mathf.Max(0.3f, pos.y - g) / 9.81f);
-                    hit = pos + fl * Body.Speed * 0.9f * tFall; hit.y = g;
-                }
-                Vector3 sp = Camera.main.WorldToScreenPoint(hit);
-                if (sp.z > 0)
-                {
-                    float x = sp.x / k, y = hgt - sp.y / k;
-                    GUI.color = new Color(1f, 0.85f, 0.25f, 0.9f);
-                    GUI.DrawTexture(new Rect(x - 8, y - 1, 16, 2), Texture2D.whiteTexture);
-                    GUI.DrawTexture(new Rect(x - 1, y - 8, 2, 16), Texture2D.whiteTexture);
-                    GUI.color = Color.white;
-                }
-            }
-            if (Alive && HasAimTarget && Camera.main != null)
-            {
-                Vector3 sp = Camera.main.WorldToScreenPoint(AimPoint);
-                if (sp.z > 0)
-                {
-                    float x = sp.x / k, y = hgt - sp.y / k, r = 11;
-                    GUI.color = new Color(1f, 0.85f, 0.3f, 0.95f);
-                    GUI.DrawTexture(new Rect(x - r, y - r, 2 * r, 2), Texture2D.whiteTexture); GUI.DrawTexture(new Rect(x - r, y + r - 2, 2 * r, 2), Texture2D.whiteTexture);
-                    GUI.DrawTexture(new Rect(x - r, y - r, 2, 2 * r), Texture2D.whiteTexture); GUI.DrawTexture(new Rect(x + r - 2, y - r, 2, 2 * r), Texture2D.whiteTexture);
-                    GUI.color = Color.white;
-                }
-            }
+            // No target box and no bomb sight: there is no aim assist of any kind.
         }
 
         // ---------------------------------------------------------------- Not crashing comes first
-        /// <summary>Two planes this close (m) collide and both go down, whatever their side.</summary>
+        /// <summary>Size used for collisions by the built biplanes (m): two planes closer than their radii collide, whatever their side.</summary>
         public static float CollisionRadius = 4.5f;
         static readonly float[] HeadingOffsets = { 0f, 0.25f, -0.25f, 0.5f, -0.5f, 0.8f, -0.8f, 1.1f, -1.1f, 1.5f, -1.5f, 2.0f, -2.0f, 2.6f, -2.6f };
         static readonly float[] HardTurns = { 0f, 0.7f, -0.7f, 1.4f, -1.4f, 2.2f, -2.2f, 3.1f, -3.1f };
@@ -735,21 +667,65 @@ namespace Redbaron
             return obstacleGrid[Mathf.Clamp(Mathf.RoundToInt(x), 0, gridW - 1) * gridL + Mathf.Clamp(Mathf.RoundToInt(z), 0, gridL - 1)];
         }
 
-        bool MidAirCollision(Vector3 pos)
+        // ---------------------------------------------------------------- Collisions
+        Vector3 Forward => new Vector3(Mathf.Sin(Body.Yaw), 0, Mathf.Cos(Body.Yaw));
+
+        /// <summary>Touching an obstacle taller than the plane (tree crown, mountain, building, the rock wall) or another
+        /// plane costs energy, pushes the plane clear and gives it a moment of immunity to further collisions.
+        /// While immune it is still pushed out of anything it touches, so it never passes through. Returns true if it went down.</summary>
+        bool CheckCollisions(Vector3 pos)
         {
+            float ground = ObstacleHeight(pos.x, pos.z, out Collider under);
+            if (pos.y - 0.42f < ground)
+            {
+                Push(AwayFromObstacle(pos));
+                if (!CollisionImmune && Collide(Describe(under, pos))) return true;
+            }
             foreach (var o in All)
             {
                 if (o == this || !o.Alive) continue;
-                if ((o.Body.Position - pos).magnitude > BodyRadius + o.BodyRadius) continue;
-                if (RedbaronGame.Instance != null)
-                {
-                    RedbaronGame.Instance.OnPlaneCrash(pilotName, team, "el " + o.pilotName);
-                    RedbaronGame.Instance.OnPlaneCrash(o.pilotName, o.team, "el " + pilotName);
-                }
-                o.GoDown(); GoDown();
-                return true;
+                Vector3 d = pos - o.Body.Position; d.y = 0;
+                if (d.magnitude > BodyRadius + o.BodyRadius) continue;
+                Vector3 n = d.sqrMagnitude > 1e-4f ? d.normalized : -Forward;
+                Push(n); o.Push(-n); // both planes are thrown apart
+                if (!o.CollisionImmune) o.Collide("el " + pilotName);
+                if (!CollisionImmune && Collide("el " + o.pilotName)) return true;
             }
             return false;
+        }
+
+        void Push(Vector3 away)
+        {
+            if (Body is KinematicFlight kf) kf.Push(away, pushSpeed, pushTime);
+        }
+
+        /// <summary>One collision: energy lost and the immunity starts. Returns true if the plane went down.</summary>
+        bool Collide(string what)
+        {
+            graceUntil = Time.time + collisionGrace;
+            Hp = Mathf.Max(0, Hp - collisionDamage);
+            Vector3 p = Body.Position;
+            Sfx.PlaneHit(p); Sfx.Thud(p, 0.5f);
+            Combat.Puff(p, new Color(0.45f, 0.4f, 0.32f, 0.85f), 0.6f, 2.2f, 0.4f);
+            if (Hp > 0) { RedbaronGame.Log($"{pilotName} ({team.Name()}) choca contra {what} y pierde {collisionDamage:0} de energía"); return false; }
+            if (RedbaronGame.Instance != null) RedbaronGame.Instance.OnPlaneCrash(pilotName, team, what);
+            GoDown();
+            return true;
+        }
+
+        /// <summary>Horizontal direction out of the obstacle: towards the free samples around the plane and away from
+        /// the blocked ones. Boxed in on every side, it backs out the way it came.</summary>
+        Vector3 AwayFromObstacle(Vector3 pos)
+        {
+            float clear = pos.y - 0.42f, r = BodyRadius + 1.5f;
+            Vector3 sum = Vector3.zero;
+            for (int k = 0; k < 12; k++)
+            {
+                float a = k * Mathf.PI / 6f;
+                Vector3 d = new Vector3(Mathf.Sin(a), 0, Mathf.Cos(a));
+                sum += ObstacleHeight(pos.x + d.x * r, pos.z + d.z * r) < clear ? d : -d;
+            }
+            return sum.sqrMagnitude > 0.04f ? sum.normalized : -Forward;
         }
 
         /// <summary>AI heading on the flight plane. Each candidate is flown ahead for 2.1 s at the real turn rate.
@@ -838,7 +814,10 @@ namespace Redbaron
         }
 
         // ---------------------------------------------------------------- Daño
-        public void TakeHit(BiplaneAI shooter)
+        public void TakeHit(BiplaneAI shooter) => TakeHit(shooter.pilotName, shooter.team);
+
+        /// <summary>A round or a flak burst: one energy point. by/byTeam are credited if the plane goes down.</summary>
+        public void TakeHit(string by, Team byTeam)
         {
             if (!Alive) return;
             Hp--;
@@ -846,7 +825,7 @@ namespace Redbaron
             Combat.Puff(Body.Position, new Color(0.94f, 0.75f, 0.38f, 0.9f), 0.35f, 1.5f, 0);
             if (Hp <= 0)
             {
-                if (RedbaronGame.Instance != null) RedbaronGame.Instance.OnPlaneKill(shooter.pilotName, shooter.team, pilotName, team);
+                if (RedbaronGame.Instance != null) RedbaronGame.Instance.OnPlaneKill(by, byTeam, pilotName, team);
                 GoDown();
             }
         }
@@ -859,7 +838,8 @@ namespace Redbaron
             visual.gameObject.SetActive(false);
         }
 
-        void Crash(Collider under, Vector3 pos)
+        /// <summary>What the plane ran into, for the battle log. A tree it hits falls.</summary>
+        string Describe(Collider under, Vector3 pos)
         {
             string what = "el suelo";
             bool outside = pos.x < 1 || pos.z < 1 || pos.x > RedbaronMap.WorldW - 1 || pos.z > RedbaronMap.WorldL - 1;
@@ -876,8 +856,7 @@ namespace Redbaron
                     if (RedbaronMap.Sample(d.x, d.y).mountain > 2) what = "la montaña";
                 }
             }
-            if (RedbaronGame.Instance != null) RedbaronGame.Instance.OnPlaneCrash(pilotName, team, what);
-            GoDown();
+            return what;
         }
 
         void Fire(Vector3 pos, Vector3 dir, float spread = 0.045f)
@@ -909,13 +888,23 @@ namespace Redbaron
         public float turnRate = 1.15f;     // rad/s
         public float vyAccel = 14f;        // m/s²
         Vector3 pos; float yaw, vy;
+        Vector3 pushDir; float pushSpeed, pushT, pushT0;
 
         public Vector3 Position => pos;
         public float Yaw => yaw;
         public float VerticalSpeed => vy;
         public float Speed => speed;
 
-        public void Teleport(Vector3 p, float y, float v) { pos = p; yaw = y; vy = v; }
+        public void Teleport(Vector3 p, float y, float v) { pos = p; yaw = y; vy = v; pushT = 0; }
+
+        /// <summary>A collision push: for a moment the plane is thrown along dir (horizontal) and cannot move against it.
+        /// The heading is not changed; the pilot has to turn away.</summary>
+        public void Push(Vector3 dir, float speed, float time)
+        {
+            dir.y = 0;
+            if (dir.sqrMagnitude < 1e-6f || time <= 0) return;
+            pushDir = dir.normalized; pushSpeed = speed; pushT = pushT0 = time;
+        }
 
         public void Steer(float desiredYaw, float desiredVy, float dt)
         {
@@ -923,7 +912,15 @@ namespace Redbaron
             yaw += Mathf.Clamp(dy, -turnRate * dt, turnRate * dt);
             if (!float.IsNaN(BiplaneAI.FlightAltitude)) { vy = 0; pos.y = BiplaneAI.FlightAltitude; }
             else vy += Mathf.Clamp(desiredVy - vy, -vyAccel * dt, vyAccel * dt);
-            pos += new Vector3(Mathf.Sin(yaw) * speed, vy, Mathf.Cos(yaw) * speed) * dt;
+            Vector3 v = new Vector3(Mathf.Sin(yaw) * speed, vy, Mathf.Cos(yaw) * speed);
+            if (pushT > 0)
+            {
+                float into = Vector3.Dot(v, pushDir);
+                if (into < 0) v -= pushDir * into; // no motion back into what was hit while the push lasts
+                v += pushDir * pushSpeed * (pushT / pushT0);
+                pushT -= dt;
+            }
+            pos += v * dt;
         }
     }
 

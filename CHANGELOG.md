@@ -12,6 +12,28 @@
 **Map**
 - The cliff around the map is built from complete low-poly rock models, with no more see-through gaps (#8).
 - Mountain rocks keep their collisions in the phone build (#7).
+- An anti-aircraft tower stands beside each side's command post. It fires flak at enemy planes in reach. Planes fly over it, and bombs destroy it.
+
+**Colours**
+- The hangar ships come from the Redbaron colour kit. Each ship has colour zones and carries both insignias.
+- The Entente flies in navy blue with roundels, and the Central Powers in green with crosses.
+- Your own plane is red, with your side's roundels.
+- Paint, metal, wood, canvas and stone have a grain texture, so the models no longer look like plastic.
+- The Central Powers' flags, HUD bars and menu cards are green now. The Entente keeps its blue.
+
+**Combat**
+- A collision no longer destroys a plane outright. This covers tree crowns, mountains, buildings, the rock wall and other planes. Each collision costs 2 of the 6 energy points and pushes the plane clear. For the next 1.5 s, further collisions do no damage. In a mid-air collision, both planes are pushed apart.
+- Every gun fires 20 % more slowly:
+  - your plane: one burst every 0.5 s (was 0.4);
+  - AI pilots: one burst every 2.75 s (was 2.2);
+  - riflemen: one shot every 3.25 s (was 2.6);
+  - bunkers: one burst every 1.75 s (was 1.4).
+- Plane rounds fly 20 % more slowly: 96 m/s plus the plane's speed (was 120).
+- Nobody gets aim assist:
+  - your rounds fly where the nose points, and there is no target box or bomb sight;
+  - AI pilots aim at where an enemy is now, with no computed lead, and drop bombs by eye;
+  - the towers do not lead their targets either.
+- One rule stays: everything in the air flies on one flight plane.
 
 ## 0.1 (2026-11-12): first version on GitHub
 
@@ -24,7 +46,7 @@ The prototype as it stands after the first development sessions.
 **Flying**
 - You fly one plane. Left/right only rolls it, and the plane turns by banking: turn = 65°/s × sin(bank). The bank holds when you let go, and below 3° the wings level by themselves.
 - Up/down changes speed between a minimum and a maximum. Altitude is fixed: every aircraft and every air-to-air round shares one flight plane, low enough to meet tree crowns and mountains.
-- Fire with Z or Space, with a light aim assist; drop bombs with X.
+- Fire with Z or Space, with a light aim assist (removed in 0.2); drop bombs with X.
 - No friendly fire; planes collide with each other.
 - 15 aircraft models from the Redbaron hangar, picked at random at each respawn. You respawn at your own base.
 - Refill icon over each airfield: fly through it to restore energy, rounds and bombs.

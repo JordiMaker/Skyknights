@@ -30,7 +30,7 @@ namespace Redbaron
         public float walkSpeed = 2.6f;
         public float runSpeed = 3.6f;
         public float rifleRange = 50f;
-        public float rifleCooldown = 2.6f;
+        public float rifleCooldown = 3.25f; // 20 % slower than the first version's 2.6 s
         public float baseHit = 0.55f;
         public float coverSearchRadius = 16f;
         [Tooltip("Radio alrededor del punto de una orden en el que el soldado busca cobertura.")]
@@ -366,7 +366,7 @@ namespace Redbaron
             var ts = target.GetComponent<SoldierAI>();
             Vector3 aim = ts != null ? target.transform.position + Vector3.up * (ts.EyeHeight() - 0.2f) : target.AimPoint;
             if (!Combat.HasLineOfSight(eye, aim, target.transform)) { cd = 0.5f; return; }
-            cd = rifleCooldown + Random.Range(0f, 0.8f);
+            cd = rifleCooldown + Random.Range(0f, 1f);
             float d = Vector3.Distance(eye, aim);
             float p;
             if (ts != null)

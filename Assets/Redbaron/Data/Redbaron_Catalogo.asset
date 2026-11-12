@@ -117,11 +117,16 @@ MonoBehaviour:
   - label: "Giro m\xE1ximo"
     value: "65\xB0/s"
   - label: Cadencia
-    value: "una r\xE1faga cada 0,4 s"
+    value: "una r\xE1faga cada 0,5 s"
+  - label: Bala
+    value: "96 m/s m\xE1s la velocidad del avi\xF3n"
+  - label: Choque
+    value: "\u22122 de energ\xEDa, y 1,5 s sin m\xE1s da\xF1o por choques"
   shipStatsNote: 'En la batalla todas las naves vuelan igual por ahora: lo que cambia es el modelo.'
   buildings:
   - name: Puesto de mando
     model: 0
+    prefab: {fileID: 0}
     count: Uno por bando
     stats:
     - label: Resistencia
@@ -135,6 +140,7 @@ MonoBehaviour:
     description: "El coraz\xF3n de cada base. Cuando su barra llega a cero, el bando contrario gana y la batalla vuelve a empezar."
   - name: Casamata
     model: 1
+    prefab: {fileID: 0}
     count: Seis por bando
     stats:
     - label: Resistencia
@@ -146,10 +152,29 @@ MonoBehaviour:
     - label: Alcance
       value: 42 m
     - label: "R\xE1faga"
-      value: 2 disparos cada 1,4 s
+      value: 2 disparos cada 1,75 s
     description: "Nido de ametralladora de hormig\xF3n con sacos terreros. Dispara a la infanter\xEDa enemiga que se acerca; cuatro bombas bien puestas lo destruyen."
+  - name: "Torre antia\xE9rea"
+    model: 4
+    prefab: {fileID: 919132149155446097, guid: d01b5ca0f521d4a1e8003ce88f66bfc6, type: 3}
+    count: Una por bando
+    stats:
+    - label: Resistencia
+      value: 18
+    - label: "Da\xF1o por bomba"
+      value: 6 (a menos de 8 m)
+    - label: Arma
+      value: "ca\xF1\xF3n antia\xE9reo"
+    - label: Alcance
+      value: 60 m
+    - label: Cadencia
+      value: un proyectil cada 2,5 s
+    - label: "Explosi\xF3n"
+      value: "5 m alrededor del avi\xF3n, \u22121 de energ\xEDa"
+    description: "Junto al puesto de mando. Dispara a los aviones enemigos que se acercan, sin adelantarse a su movimiento: el proyectil estalla donde estaba el avi\xF3n, as\xED que un avi\xF3n r\xE1pido escapa y uno lento o que gira cae en la explosi\xF3n. Los aviones pasan por encima; tres bombas la destruyen."
   - name: Hangar
     model: 2
+    prefab: {fileID: 0}
     count: Dos por bando
     stats:
     - label: Resistencia
@@ -161,6 +186,7 @@ MonoBehaviour:
     description: "Aqu\xED despegan y reaparecen los aviones de su bando. Las bombas que caen sobre el aer\xF3dromo enemigo suman en el marcador \xABBombas en aer\xF3dromo\xBB."
   - name: Punto de recarga
     model: 3
+    prefab: {fileID: 0}
     count: "Uno por aer\xF3dromo"
     stats:
     - label: Recupera

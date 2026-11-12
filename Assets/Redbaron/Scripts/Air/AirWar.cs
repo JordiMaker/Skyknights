@@ -41,6 +41,14 @@ namespace Redbaron
         [Tooltip("A floating icon over each airfield: flying through it restores energy, ammunition and bombs for that side.")]
         public bool refillIcons = true;
 
+        [Header("Anti-aircraft towers")]
+        [Tooltip("The tower model (Torre_Flak from the Redbaron colour kit). Empty = no towers.")]
+        public GameObject flakTowerModel;
+        [Tooltip("Where each side's towers stand, in design metres of the Central Powers' half (X 0-100, Z 0-150); the Entente gets the mirror image.")]
+        public Vector2[] flakTowerSpots = { new Vector2(64f, 8f) };
+        [Tooltip("Room between the top of a tower and the flight plane (m): planes pass over the towers.")]
+        public float flakTowerClearance = 1.6f;
+
         public BiplaneAI Fokker { get; private set; }
         /// <summary>The plane the player flies (null when all four are AI).</summary>
         public BiplaneAI Player { get; private set; }
@@ -62,6 +70,17 @@ namespace Redbaron
                     Rect r = RedbaronMap.AirfieldWorldRect(t);
                     AirPickup.Create(t, new Vector3(r.center.x, BiplaneAI.FlightAltitude, r.center.y), mat).transform.SetParent(transform, true);
                 }
+
+            // Built after the flight plane is known, so the towers never raise it: each one is just below it.
+            if (flakTowerModel != null && !float.IsNaN(BiplaneAI.FlightAltitude) && flakTowerSpots != null)
+                foreach (var t in new[] { Team.Centrales, Team.Entente })
+                    foreach (var spot in flakTowerSpots)
+                    {
+                        float Z = RedbaronMap.ForTeam(t, spot.y);
+                        Vector3 ground = RedbaronMap.ToWorld(spot.x, Z, RedbaronMap.Height(spot.x, Z));
+                        float height = Mathf.Clamp(BiplaneAI.FlightAltitude - flakTowerClearance - ground.y, 3f, 12f);
+                        FlakTower.Build(flakTowerModel, t, ground, height, transform);
+                    }
 
             var first = playerFliesCamel
                 ? BiplaneAI.Spawn(playerPilotName, Team.Entente, PlaneModel.Camel, 4.2f, 1.7f, 9.5f, mat)

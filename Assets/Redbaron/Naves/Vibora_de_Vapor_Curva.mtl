@@ -1,4 +1,4 @@
-# Vibora_de_Vapor_Curva · materiales
+# Vibora_de_Vapor · materiales
 newmtl Equipo
 Kd 0.02422 0.07592 0.25905 # srgb 0.1843 0.3098 0.5412
 Ka 0 0 0
@@ -71,11 +71,11 @@ Ns 80
 d 1
 illum 2
 
-newmtl Azul
-Kd 0.02422 0.07592 0.25905 # srgb 0.1843 0.3098 0.5412
+newmtl Acero
+Kd 0.16045 0.14799 0.12472 # srgb 0.4353 0.4196 0.3882
 Ka 0 0 0
-Ks 0.000 0.000 0.000
-Ns 40
+Ks 0.250 0.250 0.250
+Ns 100
 d 1
 illum 2
 
@@ -84,14 +84,6 @@ Kd 0.37359 0.01606 0.00970 # srgb 0.6392 0.1529 0.1216
 Ka 0 0 0
 Ks 0.000 0.000 0.000
 Ns 40
-d 1
-illum 2
-
-newmtl Acero
-Kd 0.16045 0.14799 0.12472 # srgb 0.4353 0.4196 0.3882
-Ka 0 0 0
-Ks 0.250 0.250 0.250
-Ns 100
 d 1
 illum 2
 
@@ -108,6 +100,46 @@ Kd 0.19749 0.09155 0.03025 # srgb 0.4784 0.3373 0.2039
 Ka 0 0 0
 Ks 0.000 0.000 0.000
 Ns 30
+d 1
+illum 2
+
+newmtl EscA
+Kd 0.02422 0.07592 0.25905 # srgb 0.1843 0.3098 0.5412
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 40
+d 1
+illum 2
+
+newmtl EscFondo
+Kd 0.84339 0.79699 0.65232 # srgb 0.9255 0.9020 0.8235
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl EscB
+Kd 0.37359 0.01606 0.00970 # srgb 0.6392 0.1529 0.1216
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 40
+d 1
+illum 2
+
+newmtl CruzFondo
+Kd 0.84339 0.79699 0.65232 # srgb 0.9255 0.9020 0.8235
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl CruzA
+Kd 0.00775 0.00659 0.00503 # srgb 0.1098 0.1020 0.0902
+Ka 0 0 0
+Ks 0.100 0.100 0.100
+Ns 60
 d 1
 illum 2
 

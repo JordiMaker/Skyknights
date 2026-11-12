@@ -100,6 +100,7 @@ namespace Redbaron
             foreach (var s in new List<SoldierAI>(SoldierAI.All)) Destroy(s.gameObject);
             foreach (var c in CoverPoint.All) c.occupants = 0;
             foreach (var b in Bunker.All) b.ResetBunker();
+            foreach (var f in FlakTower.All) f.ResetTower();
             foreach (var p in CommandPost.All) p.ResetPost();
             if (spawner != null) spawner.ResetWaves();
             Log("Nueva batalla: las oleadas salen de las bases");

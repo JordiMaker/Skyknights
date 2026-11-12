@@ -9,7 +9,7 @@ namespace Redbaron
     {
         public static Team Enemy(this Team t) => t == Team.Centrales ? Team.Entente : Team.Centrales;
         public static string Name(this Team t) => t == Team.Centrales ? "Potencias Centrales" : "Entente";
-        public static Color FlagColor(this Team t) => t == Team.Centrales ? new Color32(181, 73, 58, 255) : new Color32(95, 134, 176, 255);
+        public static Color FlagColor(this Team t) => t == Team.Centrales ? new Color32(104, 150, 76, 255) : new Color32(95, 134, 176, 255); // Central Powers green, Entente navy
         public static Color Uniform(this Team t) => t == Team.Centrales ? new Color32(111, 116, 102, 255) : new Color32(125, 147, 173, 255);
     }
 

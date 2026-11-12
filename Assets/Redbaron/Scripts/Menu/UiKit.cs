@@ -18,7 +18,7 @@ namespace Redbaron
         public static readonly Color Muted = new Color(0.72f, 0.69f, 0.60f);
         public static readonly Color Brass = new Color(0.87f, 0.70f, 0.33f);
         public static readonly Color ButtonColor = new Color(0.23f, 0.24f, 0.18f, 0.96f);
-        public static readonly Color Centrales = new Color32(0xA3, 0x27, 0x1F, 255);
+        public static readonly Color Centrales = new Color32(0x3F, 0x6B, 0x3A, 255); // the Green theme
         public static readonly Color Entente = new Color32(0x2F, 0x4F, 0x8A, 255);
 
         public static Color SideColor(Team t) => t == Team.Centrales ? Centrales : Entente;
