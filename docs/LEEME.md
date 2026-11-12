@@ -694,3 +694,23 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
 - The game's G/H keys for all troops (RedbaronGame → Global Order Keys) and its 1/2/3 speed keys (moved to F5–F7) are off here.
 
 **About Low Poly Shooter Pack - Free Sample (Infima Games).** It was checked for this scene and not imported. It has no enemy AI: it is a first-person player controller with weapons, pop-up targets and explosive barrels. It needs the new Input System and Post Processing, and it ships its own ProjectSettings and Packages/manifest.json.
+
+## Multiplayer FPS demo (added 2026-11-12)
+
+`Assets/Redbaron/Scenes/Redbaron_Multijugador.unity` runs the Alteruna **Multiplayer FPS Template** (Asset Store, by Alteruna AB) on the Redbaron map: the battle scene with the planes, the waves and the Quick RTS managers switched off, plus the template's player, cameras, UI, score board and effects, the SDK's room menu and eight spawn points (**PuntosAparicion**, four on each half of the map). It is an Editor demo (mouse and keyboard) and is not in the build settings.
+
+**What is in the repository.** Only our part: the scene, `Scripts/Multiplayer/RedbaronFpsDemo.cs`, the tags and layers, and the package entries. The template (`Assets/AlterunaFPS`) and the SDK are not: they are Alteruna's, under their EULA.
+
+**Setting it up on another machine.**
+1. The Alteruna Multiplayer SDK v2 comes from the Package Manager: **+ → Install package from git URL** → `https://github.com/Alteruna/multiplayer-sdk-unity-package.git` (the entry is already in `Packages/manifest.json`, so Unity fetches it when the project opens; git must be installed).
+2. Import the template's **Assets/AlterunaFPS** folder from the Asset Store package. Import only that folder: the package also carries `ProjectSettings` and `Packages/manifest.json`, which overwrite Quick RTS's layers, tags and input, and an `Editor` DLL that is not needed. Skip `URP-Materials.unitypackage` (the project is Built-in).
+3. Three changes to the template, all small:
+   - `Scripts/CinemachineVirtualCameraInstance.cs`: `using Unity.Cinemachine;` instead of `using Cinemachine;`, with `#pragma warning disable 618`. Unity 6 ships Cinemachine 6, which keeps the old `CinemachineVirtualCamera` as obsolete, so the template's camera prefab still loads.
+   - `Prefab/Player.prefab`: its objects on layers 6 and 7 go to **19 (Bullet)** and **20 (BulletIgnore)**, because 6 and 7 are Quick RTS's fog layers here; `BulletCollisionLayers` becomes every layer but Ignore Raycast, UI and BulletIgnore, so shots hit the map; `GroundLayers` adds Terrain (3) and Placeable (15), the layers of the Redbaron ground.
+   - `Scripts/UI/ResizeController.cs`: a null check on the parent, because the Editor runs its Awake while the UI prefab is being placed.
+4. Tags `Player` and `CinemachineTarget`, layers 19 `Bullet` and 20 `BulletIgnore` (already in `ProjectSettings/TagManager.asset`).
+5. Register the Alteruna licence: **Window → Alteruna → Register license**, with the project key from portal.mp2.alteruna.com. Without it the service refuses every connection ("Disconnected from server. Reason: [Failed]"), also on the LAN.
+
+**The demo panel (RedbaronFpsDemo).** Top left: the connection state, and buttons for **Jugar solo** (the template's offline mode: the Player prefab with its Avatar component off and `PlayerController.Avatar` cleared, at a random spawn point; the Multiplayer object is disabled), **Crear sala**, **Buscar en LAN** and **Conectar a IP** (`MultiplayerManager.CreateRoom`, `JoinLan`, `DirectConnect`). While playing the cursor is locked and the panel hides; Escape opens the template's menu. The Multiplayer object spawns one avatar per player who joins a room, at the spawn points in turn.
+
+**Controls.** WASD moves, the mouse aims, left click fires, right click zooms, R reloads, Space jumps, Shift sprints, V switches first and third person, Escape the menu.

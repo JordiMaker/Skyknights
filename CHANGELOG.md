@@ -83,6 +83,12 @@
 - Camera: arrows, screen edges or middle mouse to move it; the wheel zooms; Q/E turn it; Space centres it on the selection.
 - It is for the Editor only and is not in the phone build.
 
+**Multiplayer FPS demo**
+- `Redbaron_Multijugador.unity`: the Alteruna Multiplayer FPS Template running on the Redbaron map (no planes, no waves). First or third person (V), pistol, reload, jump, sprint, respawn, score board, Escape menu.
+- A demo panel: play alone (the template's offline mode, a local player at a random spawn point), create a room, look for rooms on the LAN, or connect to an address. Eight spawn points, four on each half of the map.
+- Online play needs the project's Alteruna licence registered in the Editor (Window → Alteruna → Register license). Without it the service refuses every connection, and the demo says so.
+- The template itself is not in this repository (Asset Store, Alteruna EULA): see the README for how to bring it in and the three small changes it needs.
+
 **Destructible structures**
 - Hangars can be destroyed (40 points). Bombs, shells, charges and gunfire bring them down; the planes keep taking off from the runway.
 - Infantry, tanks and mechs now attack the anti-aircraft towers too, as well as bunkers, hangars and the command post. Before, only bombs reached the towers.
