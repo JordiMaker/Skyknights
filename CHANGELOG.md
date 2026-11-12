@@ -87,6 +87,7 @@
 - `Redbaron_Multijugador.unity`: the Alteruna Multiplayer FPS Template running on the Redbaron map (no planes, no waves). First or third person (V), pistol, reload, jump, sprint, respawn, score board, Escape menu.
 - A demo panel: play alone (the template's offline mode, a local player at a random spawn point), create a room, look for rooms on the LAN, or connect to an address. Eight spawn points, four on each half of the map.
 - The battle goes on around the players: every minute each base sends a wave, and the AI of both sides advances on the enemy command post, fighting whatever it meets. The players count as soldiers of the half of the map they spawned on: the other side's AI shoots at them (a rifle hit takes 10 of their 50 points) and the players' pistols hit soldiers, vehicles and buildings with the Redbaron armour rules (a soldier dies to one shot, a tank barely notices). The HUD shows both command posts and the troops on the field.
+- Mouse sensitivity and camera smoothing are set from the demo object (the template turned ten times too slowly), and an Immortal switch keeps your own player unhurt.
 - Online play needs the project's Alteruna licence registered in the Editor (Window → Alteruna → Register license). Without it the service refuses every connection, and the demo says so.
 - The template itself is not in this repository (Asset Store, Alteruna EULA): see the README for how to bring it in and the three small changes it needs.
 

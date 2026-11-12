@@ -23,7 +23,13 @@ namespace Redbaron
     /// </summary>
     public class FpsPlayerBridge : MonoBehaviour
     {
+        /// <summary>The local player cannot be hurt (RedbaronFpsDemo → Immortal): hits of the AI are dropped, and the FPS
+        /// health is kept full against other players' bullets.</summary>
+        public static bool Immortal;
+
         public Health Redbaron { get; private set; }
+        /// <summary>The player this machine controls: the offline player, or the avatar it owns.</summary>
+        public bool IsLocal => controller == null || controller.Avatar == null || controller.Avatar.IsOwner;
         AlterunaFPS.Health fps;
         PlayerController controller;
 
@@ -52,11 +58,13 @@ namespace Redbaron
         void OnHit(Health h, float amount, GameObject source)
         {
             if (fps == null || amount <= 0) return;
+            if (Immortal && IsLocal) return;
             fps.TakeDamage(0, amount * FpsDamage.PointsPerRedbaronPoint);
         }
 
         void LateUpdate()
         {
+            if (Immortal && IsLocal && fps != null && controller != null) fps.HealthPoints = controller.MaxHealth;
             // The FPS health is the truth (other players' bullets, respawns): mirror it for the AI.
             if (fps != null) Redbaron.hp = Mathf.Clamp(fps.HealthPoints / FpsDamage.PointsPerRedbaronPoint, 0f, Redbaron.maxHp);
         }

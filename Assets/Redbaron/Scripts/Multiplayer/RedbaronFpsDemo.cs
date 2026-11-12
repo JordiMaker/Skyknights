@@ -26,6 +26,13 @@ namespace Redbaron
         [Tooltip("The SDK's room menu, hidden while playing offline.")]
         public GameObject roomMenu;
         public bool showPanel = true;
+        [Tooltip("Your own player cannot be hurt.")]
+        public bool immortal = true;
+        [Header("Mouse")]
+        [Tooltip("Degrees of turn per unit of the mouse axes, set on every player. 10 is about one degree per pixel.")]
+        public float mouseSensitivity = 10f;
+        [Tooltip("First-person camera smoothing, 0–1: 1 follows the mouse at once, lower values lag behind it.")]
+        [Range(0.05f, 1f)] public float cameraSmoothing = 0.9f;
 
         GameObject localPlayer;
         string address = "localhost";
@@ -47,8 +54,13 @@ namespace Redbaron
             bridgeT -= Time.deltaTime;
             if (bridgeT > 0) return;
             bridgeT = 0.5f;
+            FpsPlayerBridge.Immortal = immortal;
             foreach (var p in FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
+            {
                 if (p.GetComponent<FpsPlayerBridge>() == null) p.gameObject.AddComponent<FpsPlayerBridge>();
+                p.MouseSensitivity = mouseSensitivity;
+                p.FirstPersonCameraRotationSmoothing = cameraSmoothing;
+            }
             foreach (var h in Health.All)
                 if (h != null && (h.IsStructure || h.GetComponent<SoldierAI>() != null) && h.GetComponent<FpsTargetBridge>() == null)
                     h.gameObject.AddComponent<FpsTargetBridge>();
@@ -78,7 +90,9 @@ namespace Redbaron
             go.SetActive(true);
             localPlayer = go;
             if (roomMenu != null) roomMenu.SetActive(false);
-            if (multiplayer != null) multiplayer.enabled = false; // no connection attempts behind the offline game
+            // As in the template's Offline scene, there is no Multiplayer object at all: with one present, even disabled,
+            // the players' input synchroniser keeps trying to send remote procedures.
+            if (multiplayer != null) { Destroy(multiplayer.gameObject); multiplayer = null; }
             status = "Modo offline: un solo jugador en el mapa";
             RedbaronGame.Log(status);
             return go;
@@ -160,6 +174,7 @@ namespace Redbaron
             if (multiplayer != null && !Online && !Offline && Time.timeSinceLevelLoad > 6f)
                 GUILayout.Label("No conecta con Alteruna. Si el proyecto no tiene licencia registrada, hazlo en Window → Alteruna → Register license (clave de portal.mp2.alteruna.com).", small);
             GUILayout.Space(4);
+            immortal = GUILayout.Toggle(immortal, " Inmortal (tu jugador no recibe daño)", small);
             GUI.enabled = !Offline;
             if (GUILayout.Button("Jugar solo (offline)", button)) PlayOffline();
             GUILayout.BeginHorizontal();

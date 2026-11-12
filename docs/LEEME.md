@@ -708,6 +708,8 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
    - `Scripts/CinemachineVirtualCameraInstance.cs`: `using Unity.Cinemachine;` instead of `using Cinemachine;`, with `#pragma warning disable 618`. Unity 6 ships Cinemachine 6, which keeps the old `CinemachineVirtualCamera` as obsolete, so the template's camera prefab still loads.
    - `Prefab/Player.prefab`: its objects on layers 6 and 7 go to **19 (Bullet)** and **20 (BulletIgnore)**, because 6 and 7 are Quick RTS's fog layers here; `BulletCollisionLayers` becomes every layer but Ignore Raycast, UI and BulletIgnore, so shots hit the map; `GroundLayers` adds Terrain (3) and Placeable (15), the layers of the Redbaron ground.
    - `Scripts/UI/ResizeController.cs`: a null check on the parent, because the Editor runs its Awake while the UI prefab is being placed.
+   - `Scripts/UI/ScoreBoard.cs`: a missing score row (an offline player) returns quietly instead of logging an error.
+   - `Scripts/Player/PlayerController.Camera.cs`: a `MouseSensitivity` factor on the mouse axes (the template turned 0.1° per pixel, ten times slower than usual) and the smoothing range widened to 0–1. RedbaronFpsDemo sets both on every player (Mouse Sensitivity 10, Camera Smoothing 0.9).
 4. Tags `Player` and `CinemachineTarget`, layers 19 `Bullet` and 20 `BulletIgnore` (already in `ProjectSettings/TagManager.asset`).
 5. Register the Alteruna licence: **Window → Alteruna → Register license**, with the project key from portal.mp2.alteruna.com. Without it the service refuses every connection ("Disconnected from server. Reason: [Failed]"), also on the LAN.
 
@@ -719,5 +721,7 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
 - `FpsPlayerBridge`, on each player: a Redbaron.Health the AI can see (registered in `Health.Fighters`, which SoldierAI.PickTarget reads as soldiers in the open) and shoot; every hit is passed on to the FPS health, and the FPS health is mirrored back each frame, so other players' bullets and respawns count too. The player's side is the half of the map it is standing on when it (re)spawns: its own side's AI leaves it alone.
 - `FpsTargetBridge`, on every AI unit and building: an FPS health the pistol's raycast can hit; what it loses is passed to the Redbaron health as bullet damage, so armour applies (a tenth to vehicles).
 - RedbaronFpsDemo adds both bridges every half second to whatever is missing one.
+
+**Immortal.** DemoFPS → Immortal (on by default, also a toggle on the panel): your own player (the offline one, or the avatar you own) takes no damage: the AI's hits are dropped and its FPS health is kept full against other players' bullets.
 
 **Controls.** WASD moves, the mouse aims, left click fires, right click zooms, R reloads, Space jumps, Shift sprints, V switches first and third person, Escape the menu.
