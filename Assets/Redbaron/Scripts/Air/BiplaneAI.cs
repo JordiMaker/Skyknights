@@ -955,6 +955,11 @@ namespace Redbaron
             var go = acc.ToObject("Bomba", I.transform, from.material, false);
             go.transform.position = p;
             I.bombs.Add(new BombShot { from = from, t = go.transform, v = v });
+            // Where it will land (ground about level with the lanes): soldiers there may run for it.
+            float g = -Physics.gravity.y, ground = BiplaneAI.ObstacleHeight(p.x + v.x, p.z + v.z, out _);
+            float h = Mathf.Max(0f, p.y - ground);
+            float t = (v.y + Mathf.Sqrt(v.y * v.y + 2f * g * h)) / g;
+            Combat.WarnBlast(new Vector3(p.x + v.x * t, ground, p.z + v.z * t), 6f, from.team);
         }
 
         void Update()
@@ -1018,6 +1023,7 @@ namespace Redbaron
                     }
                     TreeDestructible.FellAround(p, 4f);
                     Breakable.BreakAround(p, 6f);
+                    Combat.SuppressAround(p, 14f, b.from.team, 0.7f);
                     Destroy(b.t.gameObject);
                     bombs.RemoveAt(i);
                 }

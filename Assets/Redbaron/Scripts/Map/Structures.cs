@@ -112,6 +112,7 @@ namespace Redbaron
                 bool hit = Random.value < p;
                 Vector3 to = best.Health.AimPoint + (hit ? Vector3.zero : Random.insideUnitSphere * 1.5f);
                 Combat.Tracer(eye, to);
+                best.Suppress(0.15f); // a machine gun keeps heads down
                 if (hit && best.Alive) best.Health.Damage(1, gameObject, DamageKind.Bullet); // little use against a tank
             }
         }

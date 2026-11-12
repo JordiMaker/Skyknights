@@ -15,11 +15,18 @@ namespace Redbaron
     /// The same AI drives every unit type (UnitType): riflemen, machine gunners, grenadiers, flamethrowers, sappers,
     /// tanks and mechs. Each fires its own weapon. Short-range units close in until their weapon reaches, sappers go for
     /// buildings and vehicles first, and vehicles never take cover.
+    ///
+    /// Tactics on top of that:
+    /// - Suppression: fire landing around a soldier (machine guns most of all) spoils its aim, sends it to cover and,
+    ///   when heavy, pins it there. It wears off, faster in cover.
+    /// - Squads (Squad): the men of one wave and lane share a target, walk behind a friendly vehicle, and fall back and regroup when beaten.
+    /// - Danger: soldiers try to jump clear of a grenade or bomb about to land next to them.
+    /// - Targets: wounded and exposed enemies and dangerous weapons come first; grenadiers and flamethrowers go for men in cover.
     /// </summary>
     [RequireComponent(typeof(NavMeshAgent))]
     public class SoldierAI : MonoBehaviour
     {
-        public enum State { Advance, ToCover, InCover, Hold, Charge, Order, Dead, Assault }
+        public enum State { Advance, ToCover, InCover, Hold, Charge, Order, Dead, Assault, Fallback, Evade }
         public static readonly List<SoldierAI> All = new List<SoldierAI>();
 
         [Header("Bando")]
@@ -53,6 +60,15 @@ namespace Redbaron
         /// <summary>What this unit is and what it fires (set by Init).</summary>
         public UnitType Type { get; private set; }
         public bool IsVehicle => Type != null && Type.IsVehicle;
+        /// <summary>The squad it came with (null for vehicles).</summary>
+        public Squad Squad { get; set; }
+        /// <summary>0–1: how much fire is landing around it. It spoils its aim and sends it to cover; at 0.8 it is pinned.</summary>
+        public float Suppression { get; private set; }
+        public bool Pinned => Suppression >= 0.8f;
+        public Health Target => target;
+        public float Length => lookSize.z;
+        /// <summary>Counter for the tests: how often a soldier jumped clear of a grenade or bomb.</summary>
+        public static int Evades;
         /// <summary>Where others aim at this unit.</summary>
         public Vector3 HitPoint => IsVehicle ? transform.position + Vector3.up * lookSize.y * 0.5f : transform.position + Vector3.up * (EyeHeight() - 0.2f);
 
@@ -74,6 +90,8 @@ namespace Redbaron
         Vector3 lastAIDest = new Vector3(float.NaN, 0, 0);
         Vector3 orderPoint;
         bool hasOrderArea;
+        float evadeT;
+        bool escorting, waitForEscort, retreated;
         readonly HashSet<int> animParams = new HashSet<int>();
 
         void Awake()
@@ -187,6 +205,8 @@ namespace Redbaron
             float dt = Time.deltaTime;
             if (CurrentState == State.InCover) coverT += dt;
             if (charge > 0) charge -= dt;
+            if (Suppression > 0) Suppression = Mathf.Max(0f, Suppression - dt * (CurrentState == State.InCover ? 0.16f : 0.08f));
+            Squad?.Think();
 
             // Una orden de Quick RTS aparece como un destino nuevo que no ha puesto esta IA.
             if (playerControlled && agent.hasPath && !agent.pathPending && !float.IsNaN(lastAIDest.x)
@@ -202,7 +222,26 @@ namespace Redbaron
             {
                 case State.Advance:
                 case State.Charge:
-                    FollowLane(CurrentState == State.Charge || charge > 0 ? runSpeed : walkSpeed);
+                {
+                    float speed = CurrentState == State.Charge || charge > 0 ? runSpeed : walkSpeed;
+                    bool escort = CurrentState == State.Advance && !IsVehicle && Squad != null && Squad.Escort != null;
+                    if (escort) FollowEscort();
+                    else
+                    {
+                        if (escorting) wi = ClosestWaypoint(); // back on the lane where the vehicle left it
+                        FollowLane(IsVehicle && waitForEscort ? speed * 0.35f : speed);
+                    }
+                    escorting = escort;
+                    break;
+                }
+                case State.Fallback:
+                    SetDest(spot, runSpeed);
+                    if (Flat(transform.position - spot) < 0.8f) { CurrentState = cover != null ? State.InCover : State.Hold; coverT = 0; Stop(); }
+                    break;
+                case State.Evade:
+                    evadeT -= dt;
+                    SetDest(spot, runSpeed);
+                    if (evadeT <= 0 || Flat(transform.position - spot) < 0.5f) { CurrentState = State.Hold; Stop(); thinkT = 0; }
                     break;
                 case State.ToCover:
                     SetDest(spot, runSpeed);
@@ -296,7 +335,7 @@ namespace Redbaron
                 if (o.team == team || !o.Alive) continue;
                 float d = Vector3.Distance(o.transform.position, transform.position);
                 if (d > Sight) continue;
-                float s = d / Mathf.Max(0.05f, Combat.Factor(how, o.Health.kind));
+                float s = d / Mathf.Max(0.05f, Combat.Factor(how, o.Health.kind)) * Priority(o, d);
                 if (s < bs) { bs = s; best = o.Health; dist = d; }
             }
             if (best != null) return best;
@@ -316,6 +355,21 @@ namespace Redbaron
                 if (d < CommandPostSight) { dist = d; return post.Health; }
             }
             return null;
+        }
+
+        /// <summary>Lower is more urgent. The squad's target, wounded men and dangerous weapons near come first. Bullets go for men
+        /// in the open; grenades and flames go for men in cover.</summary>
+        float Priority(SoldierAI o, float d)
+        {
+            float k = 1f;
+            if (Squad != null && Squad.Focus == o.Health) k *= 0.6f;
+            if (o.Health.hp < o.Health.maxHp) k *= 0.85f;
+            var w = o.Type != null ? o.Type.weapon : WeaponKind.Rifle;
+            if (d < 30f && (w == WeaponKind.MachineGun || w == WeaponKind.Flamethrower || w == WeaponKind.Demolition)) k *= 0.8f;
+            bool covered = o.CurrentState == State.InCover;
+            if (Type.weapon == WeaponKind.Grenade || Type.weapon == WeaponKind.Flamethrower) k *= covered ? 0.7f : 1f;
+            else if (covered) k *= 1.15f;
+            return k;
         }
 
         /// <summary>The nearest enemy vehicle or building (the command post included) within range.</summary>
@@ -339,6 +393,9 @@ namespace Redbaron
             float primary = sapper && tgt.kind == TargetKind.Soldier ? 0f : Type.range; // charges are for buildings and vehicles
             if (!Type.CarriesRifle) return primary;
             if (Type.weapon == WeaponKind.Flamethrower && dist <= 25f) return primary;
+            // Grenadiers and flamethrowers work their way up to men in cover and to bunkers, where rifles do little.
+            bool dugIn = tgt.kind == TargetKind.Bunker || (tgt.kind == TargetKind.Soldier && tgt.GetComponent<SoldierAI>() is SoldierAI ts && ts.CurrentState == State.InCover);
+            if (dugIn && dist <= 40f && (Type.weapon == WeaponKind.Grenade || Type.weapon == WeaponKind.Flamethrower)) return primary;
             if (sapper && tgt.kind != TargetKind.Soldier) return primary;
             return Mathf.Max(primary, UnitType.Rifleman.range);
         }
@@ -376,12 +433,29 @@ namespace Redbaron
 
         void Think()
         {
+            if (CurrentState == State.Evade) return;
             Health tgt = PickTarget(out float dist);
             target = tgt;
+            if (IsVehicle) waitForEscort = EscortLagging();
+            if (charge > 0 && Suppression > 0.7f) charge = 0; // a charge breaks down under heavy fire
             if (charge > 0) return;
             if (CurrentState == State.Order) return; // primero llegar adonde mandó el jugador
 
             bool followsLane = autoAdvance || !playerControlled;
+
+            // The squad falls back: run to cover behind, then stay there and fire while it regroups.
+            if (followsLane && Squad != null && Squad.CurrentOrder != Squad.Order.Advance)
+            {
+                if (!retreated)
+                {
+                    retreated = true;
+                    Vector3 threat = tgt != null ? tgt.transform.position : transform.position + Forward() * 30f;
+                    if (!PickCoverBehind(threat)) { ReleaseCover(); spot = RetreatPoint(); }
+                    CurrentState = State.Fallback;
+                }
+                return;
+            }
+            retreated = false;
             if (tgt == null)
             {
                 if (followsLane) { ReleaseCover(); CurrentState = State.Advance; }
@@ -389,8 +463,14 @@ namespace Redbaron
                 return;
             }
             // Out of reach (a flamethrower, a sapper's charge, a short-range vehicle): close in, unless holding a spot for the player.
+            // Under heavy fire a soldier closes in from cover to cover instead.
             if (dist > Reach(tgt, dist))
             {
+                if (!IsVehicle && Suppression > 0.7f)
+                {
+                    if (CurrentState != State.InCover && !PickCover(tgt.transform.position, false, transform.position, coverSearchRadius)) { ReleaseCover(); CurrentState = State.Hold; }
+                    return;
+                }
                 if (followsLane) { if (CurrentState != State.Assault) { ReleaseCover(); CurrentState = State.Assault; } }
                 else if (CurrentState != State.InCover) CurrentState = State.Hold;
                 return;
@@ -400,10 +480,12 @@ namespace Redbaron
             if (IsVehicle) { CurrentState = State.Hold; return; } // vehicles never take cover
 
             Vector3 ep = tgt.transform.position;
-            if (CurrentState == State.InCover && tgt.kind == TargetKind.Soldier && dist > 10 && coverT > 6 + Random.value * 4 && followsLane)
+            // Moving up from cover: not while pinned, and a machine gunner keeps its post longer and never charges.
+            bool gunner = Type.weapon == WeaponKind.MachineGun;
+            if (CurrentState == State.InCover && tgt.kind == TargetKind.Soldier && dist > 10 && coverT > (gunner ? 14 : 6) + Random.value * 4 && followsLane && Suppression < 0.4f)
             {
                 if (PickCover(ep, true, transform.position, 24)) return;
-                if (LocalOdds() >= 1.15f)
+                if (!gunner && LocalOdds() >= 1.15f && (Squad == null || Squad.Strength >= 0.75f))
                 {
                     ReleaseCover();
                     CurrentState = State.Charge; charge = 6;
@@ -460,7 +542,7 @@ namespace Redbaron
             if (IsVehicle) return 1f;
             switch (CurrentState)
             {
-                case State.Advance: case State.Charge: case State.Order: case State.ToCover: case State.Assault: return 1f;
+                case State.Advance: case State.Charge: case State.Order: case State.ToCover: case State.Assault: case State.Fallback: case State.Evade: return 1f;
             }
             if (CurrentState == State.InCover && cover != null) return cover.ProtectionAgainst(transform.position, shooter);
             Vector2 d = RedbaronMap.ToDesign(transform.position);
@@ -496,7 +578,7 @@ namespace Redbaron
 
             bool rifle = weapon == WeaponKind.Rifle && Type.weapon != WeaponKind.Rifle; // the rifle of a grenadier, flamethrower or sapper
             float cool = rifle ? UnitType.Rifleman.cooldown : Type.cooldown;
-            cd = cool + Random.Range(0f, cool * 0.3f);
+            cd = (cool + Random.Range(0f, cool * 0.3f)) * (Pinned ? 1.5f : 1f);
             float d = Vector3.Distance(eye, at);
             float p = HitChance(rifle ? UnitType.Rifleman.hit * 0.9f : Type.hit, d, ts, weapon);
             bool hit = Random.value < p;
@@ -507,6 +589,7 @@ namespace Redbaron
                     Combat.Tracer(eye, at + (hit ? Vector3.zero : Random.insideUnitSphere * 1.5f));
                     Sfx.Rifle(eye);
                     if (anim != null && !string.IsNullOrEmpty(shootTrigger) && animParams.Contains(Animator.StringToHash(shootTrigger))) anim.SetTrigger(shootTrigger);
+                    if (ts != null) ts.Suppress(0.15f);
                     if (hit) target.Damage(rifle ? 1f : Type.damage, gameObject, DamageKind.Bullet);
                     break;
 
@@ -518,13 +601,17 @@ namespace Redbaron
                         Combat.Tracer(eye, at + (h ? Vector3.zero : Random.insideUnitSphere * 1.8f));
                         if (h && target.Alive) target.Damage(Type.damage, gameObject, DamageKind.Bullet);
                     }
+                    if (ts != null) ts.Suppress(0.12f * Mathf.Max(1, Type.shots));
+                    Combat.SuppressAround(at, 3f, team, 0.06f * Mathf.Max(1, Type.shots)); // a burst keeps heads down around it
                     break;
 
                 case WeaponKind.Grenade:
                 {
                     Vector3 land = target.transform.position + FlatDir(Random.insideUnitSphere) * (hit ? 0.6f : 3.5f);
                     float dmg = Type.damage, rad = Type.splash; Team side = team; GameObject src = gameObject;
-                    Combat.Lob(eye, land, 0.55f + d * 0.02f, () => { Combat.SmallExplosion(land); Combat.Blast(land, rad, dmg, side, DamageKind.Blast, src); });
+                    float flight = 0.55f + d * 0.02f;
+                    Combat.Lob(eye, land, flight, () => { Combat.SmallExplosion(land); Combat.Blast(land, rad, dmg, side, DamageKind.Blast, src); });
+                    Combat.WarnBlast(land, rad, team); // the men there may see it coming
                     break;
                 }
 
@@ -570,7 +657,104 @@ namespace Redbaron
             }
             if (CurrentState == State.Charge || charge > 0 || CurrentState == State.Order) p *= 0.6f;
             if (transform.position.y > target.transform.position.y + 3) p *= 1.25f;
+            p *= 1f - 0.5f * Suppression; // fire around you spoils your aim
             return Mathf.Clamp01(p);
+        }
+
+        // ------------------------------------------------------------ Tactics
+        /// <summary>Fire landing around this soldier (0–1 added). Cover takes some of the edge off. Vehicles do not mind.</summary>
+        public void Suppress(float amount)
+        {
+            if (!Alive || IsVehicle || amount <= 0) return;
+            Suppression = Mathf.Min(1f, Suppression + amount * (CurrentState == State.InCover ? 0.6f : 1f));
+        }
+
+        /// <summary>A grenade or bomb is about to land at danger: jump clear of radius, if the soldier sees it and is not pinned.</summary>
+        public void Evade(Vector3 danger, float radius)
+        {
+            if (!Alive || IsVehicle || CurrentState == State.Evade || CurrentState == State.Dead) return;
+            if (Random.value > 0.65f * (1f - 0.5f * Suppression)) return;
+            Vector3 away = transform.position - danger; away.y = 0;
+            if (away.sqrMagnitude < 0.01f) away = -transform.forward;
+            Vector3 to = danger + away.normalized * (radius + 1.5f);
+            if (!NavMesh.SamplePosition(to, out var hit, 2f, NavMesh.AllAreas)) return;
+            ReleaseCover();
+            spot = hit.position; evadeT = 1.5f;
+            CurrentState = State.Evade;
+            SetDest(spot, runSpeed);
+            Evades++;
+        }
+
+        Vector3 Forward()
+        {
+            var post = CommandPost.Of(team.Enemy());
+            Vector3 d = post != null ? post.transform.position - transform.position : transform.forward;
+            d.y = 0;
+            return d.sqrMagnitude > 0.01f ? d.normalized : Vector3.forward;
+        }
+
+        /// <summary>Cover within 25 m that is farther from the threat than this soldier is (a trench is best).</summary>
+        bool PickCoverBehind(Vector3 threat)
+        {
+            float dMe = Flat(threat - transform.position);
+            CoverPoint best = null; float bs = float.MaxValue; Vector3 bestSpot = Vector3.zero;
+            foreach (var c in CoverPoint.All)
+            {
+                if (c == cover || c.occupants >= c.capacity) continue;
+                float dc = Flat(c.transform.position - transform.position);
+                if (dc > 25f) continue;
+                Vector3 s = c.SpotAgainst(threat);
+                if (Flat(threat - s) < dMe + 6f) continue;
+                Vector2 sd = RedbaronMap.ToDesign(s);
+                if (RedbaronMap.Sample(sd.x, sd.y).wet) continue;
+                float sc = dc + (c.type == CoverType.Trinchera ? -4f : 0f);
+                if (sc < bs) { bs = sc; best = c; bestSpot = s; }
+            }
+            if (best == null) return false;
+            ReleaseCover();
+            cover = best; cover.occupants++;
+            spot = bestSpot; coverT = 0;
+            return true;
+        }
+
+        /// <summary>With no cover behind: 15 m back down its own lane.</summary>
+        Vector3 RetreatPoint()
+        {
+            Vector3 p = transform.position - Forward() * 15f;
+            if (path != null && path.Count > 1)
+            {
+                int back = Mathf.Max(0, ClosestWaypoint() - 2);
+                p = path[back];
+            }
+            return NavMesh.SamplePosition(p, out var hit, 4f, NavMesh.AllAreas) ? hit.position : transform.position;
+        }
+
+        /// <summary>Walk behind the squad's vehicle, in rows of three, using it as cover.</summary>
+        void FollowEscort()
+        {
+            var v = Squad.Escort;
+            Vector3 back = -v.transform.forward; back.y = 0;
+            if (back.sqrMagnitude < 0.01f) back = -Forward();
+            back.Normalize();
+            Vector3 side = new Vector3(-back.z, 0, back.x);
+            int rank = Squad.RankOf(this);
+            Vector3 goal = v.transform.position + back * (v.Length * 0.5f + 2.5f + (rank / 3) * 2f) + side * ((rank % 3) - 1) * 1.8f;
+            float d = Flat(goal - transform.position);
+            if (d < 1f) { agent.speed = Mathf.Min(agent.speed, v.walkSpeed); return; }
+            SetDest(goal, d > 6f ? runSpeed : walkSpeed);
+        }
+
+        /// <summary>A vehicle slows down when the infantry following it falls more than 16 m behind.</summary>
+        bool EscortLagging()
+        {
+            foreach (var sq in Squad.All)
+            {
+                if (sq.Escort != this) continue;
+                float nearest = float.MaxValue;
+                foreach (var m in sq.members) if (m != null && m.Alive) nearest = Mathf.Min(nearest, Flat(m.transform.position - transform.position));
+                if (nearest < float.MaxValue && nearest > 16f) return true;
+            }
+            return false;
         }
 
         /// <summary>The soldier's model was replaced (UnitModels) and has no Animator any more: it walks with AndarMech
@@ -586,6 +770,7 @@ namespace Redbaron
         {
             CurrentState = State.Dead;
             ReleaseCover();
+            Squad?.Leave(this);
             if (agent.isOnNavMesh) agent.ResetPath();
             agent.enabled = false;
             foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;

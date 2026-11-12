@@ -572,3 +572,55 @@ Some things stay indestructible on purpose:
 - the airfield's runway markings.
 
 Trees still fall to bombs and to large blasts.
+
+## Soldier AI: suppression, squads and danger (added 2026-11-12)
+
+Every unit still advances along its lane, takes cover, moves up from cover to cover and fires its own weapon (see the sections above). On top of that, there are three tactics layers: suppression, squads and danger.
+
+**Suppression (SoldierAI.Suppress).** Each soldier carries a value from 0 to 1.
+- What adds to it:
+  - a rifle shot at him: 0.15;
+  - each machine-gun round at him: 0.12, plus 0.06 per round to everyone within 3 m;
+  - a bunker round: 0.15;
+  - a blast, within 1.8 times its radius: 0.4 at the centre, half at the edge, and 0.5 for flames;
+  - a bomb, within 14 m: 0.7.
+- In cover he takes 60 % of it.
+- It wears off at 0.08 per second, or 0.16 in cover.
+- What it does:
+  - His hit chance drops by up to half.
+  - Above 0.7, a charge breaks off, and a soldier closing in goes from cover to cover instead of running.
+  - From 0.4 up, he does not move up from cover.
+  - From 0.8 (pinned), he fires one and a half times more slowly.
+- Vehicles ignore it.
+
+**Squads (Squad, WaveSpawner → Squads).** The infantry of one lane and wave is a squad; vehicles are not in squads.
+- **Focus fire:** the target picked by at least two men becomes the squad's, and the others prefer it.
+- **Escort:** a friendly tank or mech of the same lane, within 70 m and not behind the squad, leads it.
+  - The men run to catch it up, then walk behind it in rows of three.
+  - The vehicle slows to a third of its speed when the nearest of them is more than 16 m away.
+  - When the vehicle is gone, the men go back to their lane.
+- **Falling back:** a squad of two or more falls back when either:
+  - it has lost half its men (Break At Loss) and the enemy within 45 m outnumbers it (vehicles count as three); or
+  - its average suppression reaches 0.65 (Break At Suppression) while it is outnumbered by more than 1.2 to 1.
+- When it falls back, each man runs to cover within 25 m that is at least 6 m farther from the enemy (trenches first), or 15 m back down his lane. He fires from there.
+- **Regrouping:** after 8 s it regroups for up to 14 s. If a fresh friendly squad of its lane comes within 16 m, it joins it. Otherwise it moves on with the men it has.
+- Squads holding a position for the player never fall back on their own.
+
+**Danger (Combat.WarnBlast, SoldierAI.Evade).**
+- When a grenade is thrown, the men within its blast see it coming.
+- When a plane drops a bomb, the men within 6 m of where it will land see it coming.
+- Each of them has a 65 % chance (less when suppressed) to run to just outside the blast. He has the grenade's flight time (about 0.6–1 s) or the bomb's fall (about 1.3 s) to get there.
+
+**Targets (SoldierAI.Priority).**
+- The base is distance, divided by how much the weapon hurts that target (bullets prefer soldiers to armour).
+- Multipliers:
+  - the squad's target: 0.6;
+  - wounded: 0.85;
+  - a machine gunner, flamethrower or sapper within 30 m: 0.8;
+  - for grenadiers and flamethrower troops, a man in cover: 0.7;
+  - for everyone else, a man in cover: 1.15.
+
+**Roles.**
+- Machine gunners stay in cover 14 s before moving up (the others 6 s), and never charge.
+- Grenadiers and flamethrower troops close in on men in cover and on bunkers within 40 m.
+- Nobody charges with a squad that has lost a quarter of its men.

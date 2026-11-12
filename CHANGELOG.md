@@ -39,6 +39,25 @@
 - Armour takes a tenth of a bullet's damage and half of a flame's. Shells, grenades, charges and bombs do full damage. Vehicles never take cover; they close in until their weapon reaches.
 - Turrets and mech torsos turn towards their target before they fire. A knocked-out vehicle blows up, goes dark and smokes.
 
+**Soldier AI**
+- **Suppression:** fire landing around a soldier keeps his head down. Machine guns suppress most, then bursting shells, grenades, flames and bombs, then single rifle shots.
+  - A suppressed soldier aims worse and heads for cover.
+  - A pinned soldier stays in cover and fires more slowly.
+  - Suppression wears off within seconds, faster in cover. Vehicles are not affected.
+- **Squads:** the men a lane sends in one wave fight as a squad.
+  - They concentrate fire on the target most of them have picked.
+  - They walk behind a friendly tank or mech in their lane, and the vehicle slows down if they fall behind.
+  - A squad that has lost half its men to a stronger enemy, or is pinned and outnumbered, falls back to cover behind it.
+  - It then regroups: it joins the next friendly squad coming up its lane, or moves on again with the men it has.
+- **Danger:** soldiers try to jump clear of a grenade or bomb they see coming.
+- **Targets:** the squad's target, wounded men and dangerous weapons close by come first. Rifles and machine guns prefer men in the open; grenades and flames prefer men in cover.
+- **Roles:**
+  - machine gunners hold their post longer and never charge;
+  - grenadiers and flamethrower troops work their way up to men in cover and to bunkers;
+  - a charge breaks down under heavy fire;
+  - nobody charges with a squad that has lost a quarter of its men.
+- Your squads holding a position for you never fall back on their own.
+
 **Destructible structures**
 - Hangars can be destroyed (40 points). Bombs, shells, charges and gunfire bring them down; the planes keep taking off from the runway.
 - Infantry, tanks and mechs now attack the anti-aircraft towers too, as well as bunkers, hangars and the command post. Before, only bombs reached the towers.

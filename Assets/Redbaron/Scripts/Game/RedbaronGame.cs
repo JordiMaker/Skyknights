@@ -98,6 +98,7 @@ namespace Redbaron
         public void ResetBattle()
         {
             foreach (var s in new List<SoldierAI>(SoldierAI.All)) Destroy(s.gameObject);
+            Squad.ResetAll();
             foreach (var c in CoverPoint.All) c.occupants = 0;
             foreach (var b in Bunker.All) b.ResetBunker();
             foreach (var f in FlakTower.All) f.ResetTower();

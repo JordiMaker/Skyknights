@@ -31,6 +31,8 @@ namespace Redbaron
         public string[] rotation = (string[])UnitType.DefaultRotation.Clone();
         [Tooltip("How far apart the lanes are in the rotation. With an even step, all three lanes send infantry together, then vehicles together.")]
         public int laneStep = 4;
+        [Tooltip("When squads fall back, regroup and follow vehicles.")]
+        public Squad.Settings squads = new Squad.Settings();
         [FormerlySerializedAs("kitSoldierMaterial")]
         [Tooltip("Material for the kit units: Redbaron/LowPolyVertexColor with GPU instancing on.")]
         public Material kitMaterial;
@@ -49,6 +51,8 @@ namespace Redbaron
         public float rallyZm = 40f;
 
         float timer = 0.5f;
+
+        void Awake() { Squad.Config = squads; }
         readonly Dictionary<Team, int> waveNo = new Dictionary<Team, int> { { Team.Centrales, 0 }, { Team.Entente, 0 } };
 
         void Update()
@@ -108,11 +112,16 @@ namespace Redbaron
                 int lo = type != null && type.minCount > 0 ? type.minCount : minPerLane;
                 int hi = type != null && type.maxCount > 0 ? type.maxCount : maxPerLane;
                 int n = Random.Range(lo, Mathf.Max(lo, hi) + 1);
-                for (int k = 0; k < n; k++) Spawn(prefab, t, lane, type, path, k, player);
+                var squad = type != null && type.IsVehicle ? null : new Squad(t, lane); // the men of one lane fight as a squad
+                for (int k = 0; k < n; k++)
+                {
+                    var unit = Spawn(prefab, t, lane, type, path, k, player); // spawn first: squad?.Add(Spawn(...)) would skip it for vehicles
+                    squad?.Add(unit);
+                }
             }
         }
 
-        void Spawn(GameObject prefab, Team t, int lane, UnitType type, List<Vector3> path, int k, bool player)
+        SoldierAI Spawn(GameObject prefab, Team t, int lane, UnitType type, List<Vector3> path, int k, bool player)
         {
             bool vehicle = type != null && type.IsVehicle;
             Vector3 p = path[0] + new Vector3(Random.Range(-2f, 2f), 0, (t == Team.Centrales ? -1 : 1) * k * (vehicle ? 7f : 1.8f));
@@ -145,6 +154,7 @@ namespace Redbaron
                 Vector3 rally = RedbaronMap.ToWorld(x + Random.Range(-4f, 4f), RedbaronMap.ForTeam(t, rallyZm + Random.Range(-3f, 3f)));
                 ai.OrderMove(rally);
             }
+            return ai;
         }
 
         static readonly int ColorId = Shader.PropertyToID("_Color");

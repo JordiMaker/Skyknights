@@ -195,6 +195,31 @@ namespace Redbaron
             }
             Breakable.BreakAround(p, radius);
             if (how == DamageKind.Blast && radius >= 2f) TreeDestructible.FellAround(p, radius * 0.5f);
+            SuppressAround(p, radius * 1.8f, from, how == DamageKind.Fire ? 0.5f : 0.4f);
+        }
+
+        /// <summary>Suppression (see SoldierAI.Suppress) for the enemies of shooter within r of p, half as much at the edge.</summary>
+        public static void SuppressAround(Vector3 p, float r, Team shooter, float amount)
+        {
+            if (r <= 0 || amount <= 0) return;
+            foreach (var s in SoldierAI.All)
+            {
+                if (s.team == shooter || !s.Alive || s.IsVehicle) continue;
+                Vector3 d = s.transform.position - p; d.y = 0;
+                float m = d.magnitude;
+                if (m < r) s.Suppress(amount * (1f - 0.5f * m / r));
+            }
+        }
+
+        /// <summary>A grenade or bomb is on its way to p: the enemies of shooter within its radius may jump clear (SoldierAI.Evade).</summary>
+        public static void WarnBlast(Vector3 p, float radius, Team shooter)
+        {
+            foreach (var s in SoldierAI.All)
+            {
+                if (s.team == shooter || !s.Alive || s.IsVehicle) continue;
+                Vector3 d = s.transform.position - p; d.y = 0;
+                if (d.magnitude < radius + 0.5f) s.Evade(p, radius);
+            }
         }
     }
 
