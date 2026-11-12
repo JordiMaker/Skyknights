@@ -44,7 +44,6 @@ namespace Redbaron
         Vector3 pivot; float yaw, distance = 70f;
         bool dragging; Vector2 dragStart;
         float lastClickT; SoldierAI lastClicked;
-        int recruitLane;
         bool help;
         string status = "Selecciona tus unidades y dales órdenes con el ratón";
 
@@ -343,21 +342,29 @@ namespace Redbaron
             return n > 0 ? c / n : Vector3.zero;
         }
 
+        /// <summary>The troop buttons share TroopBar's cooldowns with the battle; the bar itself stays hidden here.</summary>
+        TroopBar Troops
+        {
+            get
+            {
+                if (bar != null) return bar;
+                bar = FindAnyObjectByType<TroopBar>();
+                if (bar == null) bar = gameObject.AddComponent<TroopBar>();
+                bar.showBar = false;
+                bar.spawner = spawner;
+                return bar;
+            }
+        }
+        TroopBar bar;
+
         void Recruit(string typeName)
         {
             var type = spawner != null ? spawner.TypeByName(typeName) : null;
             if (type == null) { Say("No hay tipo «" + typeName + "»"); return; }
-            int lane = recruitLane; recruitLane = (recruitLane + 1) % 3;
-            var path = RedbaronMap.LanePath(playerTeam, lane);
-            int n = type.IsVehicle ? 1 : Mathf.Max(1, squadSize);
-            Squad squad = type.IsVehicle ? null : new Squad(playerTeam, lane);
-            for (int i = 0; i < n; i++)
-            {
-                Vector3 p = path[0] + new Vector3((i - (n - 1) * 0.5f) * 2.2f, 0, 0);
-                var u = spawner.SpawnAt(playerTeam, type, p, Quaternion.LookRotation(path[1] - path[0]), lane, true, true);
-                squad?.Add(u);
-            }
-            Say($"Reclutado: {n} × {type.name} (línea {lane + 1})");
+            if (!type.IsVehicle && squadSize > 0) type.recruitCount = squadSize;
+            var units = Troops.Recruit(type);
+            if (units == null) { Say($"{type.name}: listo en {Troops.Remaining(type):0} s"); return; }
+            Say($"Reclutado: {units.Count} × {type.name} (línea {Troops.LastLane + 1})");
         }
 
         void Say(string s) { status = s; }
@@ -614,7 +621,9 @@ namespace Redbaron
             GUILayout.Label($"Estado: {StateName(u.CurrentState)} · orden: {u.OrderText}" + (u.playerControlled ? $" · actitud {StanceName(u.stance)}" : ""), small);
             var t = u.Target;
             GUILayout.Label(t != null ? $"Objetivo: {Describe(t)} a {t.DistanceFrom(u.transform.position):0} m" : "Objetivo: ninguno a la vista", small);
-            if (u.Type != null) GUILayout.Label($"Arma: {Weapon(u.Type.weapon)}, {u.Type.range:0} m{(u.Type.CarriesRifle ? " (y fusil a 50 m)" : "")}", small);
+            if (u.Type != null) GUILayout.Label($"Arma: {(u.IsVehicle && u.Type.weapon == WeaponKind.Grenade ? "lanzagranadas" : Weapon(u.Type.weapon))}, {u.Type.range:0} m{(u.Type.CarriesRifle ? " (y fusil a 50 m)" : "")}", small);
+            if (u.AirTarget != null) GUILayout.Label($"Fuego antiaéreo contra {u.AirTarget.pilotName}", small);
+            if (u.IsVehicle) GUILayout.Label("Blindaje: balas ×0,1 · granadas ×0,25 · fuego ×0,5 · obuses, cargas y bombas ×1", small);
             if (!u.IsVehicle) GUILayout.Label($"Supresión {Bar(u.Suppression)} {u.Suppression:0.00}{(u.Pinned ? " · CLAVADO" : "")}" + (u.Squad != null ? $" · escuadra {u.Squad.AliveCount}/{u.Squad.Size} ({SquadOrder(u.Squad)})" : ""), small);
             if (mine) foreach (var l in log) GUILayout.Label(l, tiny);
         }
@@ -643,16 +652,20 @@ namespace Redbaron
                 if (GUILayout.Button(name, all ? on : button)) Order("Actitud " + StanceName(s), u => u.SetStance(s));
             }
             GUILayout.EndHorizontal();
-            GUI.enabled = spawner != null;
-            GUILayout.Label("Reclutar en tu base (salen hacia el cuartel enemigo)", small);
+            GUILayout.Label("Reclutar en tu base (salen hacia el cuartel enemigo; cada tipo tiene su tiempo de espera)", small);
             for (int i = 0; i < UnitNames.Length; i += 3)
             {
                 GUILayout.BeginHorizontal();
                 for (int j = i; j < Mathf.Min(i + 3, UnitNames.Length); j++)
-                    if (GUILayout.Button(UnitNames[j], button)) Recruit(UnitNames[j]);
+                {
+                    var t = spawner != null ? spawner.TypeByName(UnitNames[j]) : null;
+                    float rem = t != null ? Troops.Remaining(t) : 0f;
+                    GUI.enabled = t != null && rem <= 0f;
+                    if (GUILayout.Button(rem > 0f ? $"{UnitNames[j]} · {rem:0} s" : UnitNames[j], button)) Recruit(UnitNames[j]);
+                }
+                GUI.enabled = true;
                 GUILayout.EndHorizontal();
             }
-            GUI.enabled = true;
             GUILayout.EndArea();
         }
 
@@ -707,7 +720,8 @@ namespace Redbaron
                 case WeaponKind.MachineGun: return "ametralladora";
                 case WeaponKind.Grenade: return "granadas";
                 case WeaponKind.Flamethrower: return "lanzallamas";
-                case WeaponKind.Demolition: return "cargas de demolición";
+                case WeaponKind.Demolition: return "cargas de demolición (mecha de 3 s)";
+                case WeaponKind.Flak: return "cañón antiaéreo";
                 default: return "cañón";
             }
         }

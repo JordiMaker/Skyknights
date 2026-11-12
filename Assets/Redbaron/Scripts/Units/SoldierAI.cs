@@ -13,8 +13,11 @@ namespace Redbaron
     /// el soldado se queda en esa zona, se cubre y dispara. También se puede llamar a OrderMove().
     ///
     /// The same AI drives every unit type (UnitType): riflemen, machine gunners, grenadiers, flamethrowers, sappers,
-    /// tanks and mechs. Each fires its own weapon. Short-range units close in until their weapon reaches, sappers go for
-    /// buildings and vehicles first, and vehicles never take cover.
+    /// tanks and mechs. Each fires its own weapon. Short-range units close in until their weapon reaches, and vehicles
+    /// never take cover. Each weapon has its targets: bullets go for infantry (they barely scratch armour), grenades and
+    /// flames for men in cover, cannons for vehicles and buildings. A sapper picks the nearest enemy building, sets a
+    /// charge with a fuse against it and runs clear; with no building near it sticks the charge on a vehicle.
+    /// The anti-aircraft mech (WeaponKind.Flak) fires at enemy planes in reach before anything on the ground.
     ///
     /// Tactics on top of that:
     /// - Suppression: fire landing around a soldier (machine guns most of all) spoils its aim, sends it to cover and,
@@ -98,6 +101,16 @@ namespace Redbaron
         /// <summary>How far every unit sees an enemy (m).</summary>
         const float Sight = 50f;
         const float BuildingSight = 42f, CommandPostSight = 40f;
+        /// <summary>How far a sapper looks for a building to blow up (m).</summary>
+        const float SapperSight = 90f;
+        /// <summary>The charge's fuse (s) and how far the sapper runs from it (m).</summary>
+        const float ChargeFuse = 3f, ChargeRun = 9f;
+        /// <summary>The plane the anti-aircraft mech is firing at, if any.</summary>
+        public BiplaneAI AirTarget => airTarget;
+
+        FlakGun flak;
+        BiplaneAI airTarget;
+        float airT, flakCd;
 
         NavMeshAgent agent;
         Animator anim;
@@ -155,6 +168,7 @@ namespace Redbaron
             walkSpeed = Type.walkSpeed; runSpeed = Type.runSpeed;
             agent.speed = walkSpeed;
             if (Type.IsVehicle) { agent.angularSpeed = 110; agent.acceleration = 5; }
+            flak = Type.weapon == WeaponKind.Flak ? new FlakGun(t, $"{Type.name} de {t.Name()}") { burstRadius = Mathf.Max(3f, Type.splash + 3f) } : null;
             path = RedbaronMap.LanePath(t, laneIndex);
             laneOffset = Random.Range(-1.6f, 1.6f);
             wi = 1;
@@ -167,6 +181,7 @@ namespace Redbaron
             if (look == null) return;
             aim = look.aim;
             lookSize = look.size;
+            if (aim != null && flak != null) { aim.maxPitch = 75f; aim.pitchRate = 90f; } // the gun lifts to the planes
             if (!IsVehicle) return;
             Health.aimHeight = lookSize.y * 0.5f;
             agent.radius = Mathf.Clamp(Mathf.Max(lookSize.x, lookSize.z) * 0.35f, 0.5f, 1.8f);
@@ -312,9 +327,10 @@ namespace Redbaron
                     break;
             }
 
+            if (flak != null) UpdateFlak(dt);
             bool engaged = target != null && target.Alive;
-            if (aim != null) aim.Target = engaged ? AimPointOf(target) : (Vector3?)null;
-            if (engaged && (CurrentState == State.InCover || CurrentState == State.Hold || CurrentState == State.Charge || charge > 0 || CurrentState == State.Order))
+            if (aim != null) aim.Target = airTarget != null ? airTarget.Body.Position : engaged ? AimPointOf(target) : (Vector3?)null;
+            if (airTarget == null && engaged && (CurrentState == State.InCover || CurrentState == State.Hold || CurrentState == State.Charge || charge > 0 || CurrentState == State.Order))
             {
                 if (CurrentState == State.InCover || CurrentState == State.Hold) FaceTowards(target.transform.position);
                 cd -= dt;
@@ -438,17 +454,59 @@ namespace Redbaron
             transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(d), Time.deltaTime * turn);
         }
 
+        // ------------------------------------------------------------ Anti-aircraft (the scout mech)
+        /// <summary>Picks the nearest enemy plane in reach and fires flak at it once the torso points that way. While a plane is
+        /// in reach the mech does not fire at the ground, but it keeps walking or holding as its state says.</summary>
+        void UpdateFlak(float dt)
+        {
+            flak.team = team;
+            flak.Update(dt);
+            airT -= dt; flakCd -= dt;
+            if (airT <= 0) { airT = 0.4f; if (!PlaneInReach(airTarget)) airTarget = NearestPlane(); }
+            if (airTarget == null || flakCd > 0) return;
+            if (aim != null && !aim.Aimed(6f)) return;
+            Vector3 muzzle = Muzzle();
+            Vector3 heading = aim != null && aim.Muzzle != null ? aim.Muzzle.forward : transform.forward;
+            Vector3 tp = airTarget.Body.Position;
+            float dist = new Vector2(tp.x - muzzle.x, tp.z - muzzle.z).magnitude;
+            flak.Fire(muzzle, heading, dist, tp.y);
+            flakCd = (Type.cooldown + Random.Range(0f, Type.cooldown * 0.3f));
+        }
+
+        bool PlaneInReach(BiplaneAI p)
+        {
+            if (p == null || !p.Alive || p.team == team) return false;
+            Vector3 d = p.Body.Position - transform.position; d.y = 0;
+            return d.magnitude <= Type.range;
+        }
+
+        BiplaneAI NearestPlane()
+        {
+            BiplaneAI best = null; float bd = float.MaxValue;
+            Vector3 muzzle = Muzzle();
+            foreach (var p in BiplaneAI.All)
+            {
+                if (!PlaneInReach(p)) continue;
+                float d = Vector3.Distance(p.Body.Position, transform.position);
+                if (d < bd && Combat.HasLineOfSight(muzzle, p.Body.Position, p.transform)) { bd = d; best = p; }
+            }
+            return best;
+        }
+
         // ------------------------------------------------------------ Decisión
-        /// <summary>The target to fight. A sapper goes for the nearest building or vehicle first. Otherwise the nearest enemy unit,
-        /// where a weapon that barely scratches armour (rifles, machine guns) prefers soldiers. With no unit in sight,
-        /// a bunker, flak tower or hangar within 42 m, and last the command post within 40 m.</summary>
+        /// <summary>The target to fight. A sapper goes for the nearest enemy building within 90 m, then for a vehicle in sight.
+        /// Otherwise the nearest enemy unit, where a weapon that barely scratches armour (rifles, machine guns) prefers
+        /// soldiers and a cannon prefers vehicles; a cannon also takes a building near over a soldier further away.
+        /// With no unit in sight, a bunker, flak tower or hangar within 42 m, and last the command post within 40 m.</summary>
         Health PickTarget(out float dist)
         {
             dist = 0;
             if (Type.weapon == WeaponKind.Demolition)
             {
-                var hard = NearestHard(Sight, out float dh);
-                if (hard != null) { dist = dh; return hard; }
+                var building = NearestStructure(SapperSight, out float db);
+                if (building != null) { dist = db; return building; }
+                var vehicle = NearestVehicle(Sight, out float dv);
+                if (vehicle != null) { dist = dv; return vehicle; }
             }
             Health best = null; float bs = float.MaxValue;
             DamageKind how = Type.Damage;
@@ -459,6 +517,11 @@ namespace Redbaron
                 if (d > Sight) continue;
                 float s = d / Mathf.Max(0.05f, Combat.Factor(how, o.Health.kind)) * Priority(o, d);
                 if (s < bs) { bs = s; best = o.Health; dist = d; }
+            }
+            if (best != null && Type.weapon == WeaponKind.Cannon)
+            {
+                var building = NearestStructure(BuildingSight, out float db);
+                if (building != null && db * 0.7f < bs) { dist = db; return building; }
             }
             if (best != null) return best;
 
@@ -491,18 +554,33 @@ namespace Redbaron
             bool covered = o.CurrentState == State.InCover;
             if (Type.weapon == WeaponKind.Grenade || Type.weapon == WeaponKind.Flamethrower) k *= covered ? 0.7f : 1f;
             else if (covered) k *= 1.15f;
+            // Cannons are for armour; the anti-aircraft gun's shell does little to it.
+            if (o.IsVehicle) k *= Type.weapon == WeaponKind.Cannon ? 0.5f : Type.weapon == WeaponKind.Flak ? 1.5f : 1f;
             return k;
         }
 
-        /// <summary>The nearest enemy vehicle or building (the command post included) within range.</summary>
-        Health NearestHard(float range, out float dist)
+        /// <summary>The nearest enemy building (bunker, flak tower, hangar or the command post) within range.</summary>
+        Health NearestStructure(float range, out float dist)
         {
             Health best = null; dist = range;
             foreach (var h in Health.All)
             {
-                if (!h.Alive || h.team == team || (h.kind != TargetKind.Vehicle && !h.IsStructure)) continue;
+                if (!h.Alive || h.team == team || !h.IsStructure) continue;
                 float d = h.DistanceFrom(transform.position);
                 if (d < dist) { dist = d; best = h; }
+            }
+            return best;
+        }
+
+        /// <summary>The nearest enemy tank or mech within range.</summary>
+        Health NearestVehicle(float range, out float dist)
+        {
+            Health best = null; dist = range;
+            foreach (var o in All)
+            {
+                if (!o.Alive || o.team == team || !o.IsVehicle) continue;
+                float d = o.Health.DistanceFrom(transform.position);
+                if (d < dist) { dist = d; best = o.Health; }
             }
             return best;
         }
@@ -600,7 +678,9 @@ namespace Redbaron
             // Under heavy fire a soldier closes in from cover to cover instead.
             if (dist > Reach(tgt, dist))
             {
-                if (!IsVehicle && Suppression > 0.7f && forcedTarget == null)
+                // A sapper on its last metres to a building or vehicle sprints on whatever the fire.
+                bool lastRush = Type.weapon == WeaponKind.Demolition && tgt.kind != TargetKind.Soldier && dist < 15f;
+                if (!IsVehicle && Suppression > 0.7f && forcedTarget == null && !lastRush)
                 {
                     if (CurrentState != State.InCover && !PickCover(tgt.transform.position, false, transform.position, coverSearchRadius)) { ReleaseCover(); CurrentState = State.Hold; }
                     return;
@@ -613,7 +693,9 @@ namespace Redbaron
                 else if (CurrentState != State.InCover) CurrentState = State.Hold;
                 return;
             }
-            if (CurrentState == State.Assault) { CurrentState = State.Hold; Stop(); }
+            bool planting = Type.weapon == WeaponKind.Demolition && tgt.kind != TargetKind.Soldier; // a sapper at its wall
+            if (CurrentState == State.Assault) { CurrentState = State.Hold; Stop(); if (planting) cd = Mathf.Min(cd, 0.4f); }
+            if (planting) { if (CurrentState != State.Hold) { CurrentState = State.Hold; Stop(); } return; } // no cover: set the charge now
             if (tgt.kind == TargetKind.CommandPost) { CurrentState = State.Hold; return; }
             if (IsVehicle) { CurrentState = State.Hold; return; } // vehicles never take cover
 
@@ -748,7 +830,8 @@ namespace Redbaron
                     Vector3 land = target.transform.position + FlatDir(Random.insideUnitSphere) * (hit ? 0.6f : 3.5f);
                     float dmg = Type.damage, rad = Type.splash; Team side = team; GameObject src = gameObject;
                     float flight = 0.55f + d * 0.02f;
-                    Combat.Lob(eye, land, flight, () => { Combat.SmallExplosion(land); Combat.Blast(land, rad, dmg, side, DamageKind.Blast, src); });
+                    if (IsVehicle) Combat.MuzzleSmoke(eye); // the mech's launcher
+                    Combat.Lob(eye, land, flight, () => { Combat.SmallExplosion(land); Combat.Blast(land, rad, dmg, side, DamageKind.Fragment, src); });
                     Combat.WarnBlast(land, rad, team); // the men there may see it coming
                     break;
                 }
@@ -762,6 +845,7 @@ namespace Redbaron
                 }
 
                 case WeaponKind.Cannon:
+                case WeaponKind.Flak: // against the ground: a light shell
                 {
                     Vector3 burst = at + (hit ? Vector3.zero : FlatDir(Random.insideUnitSphere) * 3f);
                     Combat.MuzzleSmoke(eye);
@@ -772,10 +856,14 @@ namespace Redbaron
                 }
 
                 case WeaponKind.Demolition:
-                    Combat.Explosion(at, false);
-                    target.Damage(Type.damage, gameObject, DamageKind.Blast);
-                    Combat.Blast(at, Type.splash, 2f, team, DamageKind.Blast, gameObject); // and anyone standing next to it
+                {
+                    // The charge goes against the wall (or onto the vehicle) on the sapper's side; then the sapper runs clear.
+                    Vector3 plant = target.kind != TargetKind.Soldier && target.Body != null
+                        ? target.Body.bounds.ClosestPoint(transform.position + Vector3.up * 0.3f) : target.transform.position;
+                    DemolitionCharge.Plant(plant, target, team, ChargeFuse, Type.damage, Type.splash, gameObject);
+                    RunClear(plant, ChargeRun, ChargeFuse + 0.6f);
                     break;
+                }
             }
         }
 
@@ -812,15 +900,21 @@ namespace Redbaron
         {
             if (!Alive || IsVehicle || CurrentState == State.Evade || CurrentState == State.Dead) return;
             if (Random.value > 0.65f * (1f - 0.5f * Suppression)) return;
+            if (RunClear(danger, radius + 1.5f, 1.5f)) Evades++;
+        }
+
+        /// <summary>Runs straight away from danger to distance metres from it, for up to time seconds, then holds there.</summary>
+        bool RunClear(Vector3 danger, float distance, float time)
+        {
             Vector3 away = transform.position - danger; away.y = 0;
             if (away.sqrMagnitude < 0.01f) away = -transform.forward;
-            Vector3 to = danger + away.normalized * (radius + 1.5f);
-            if (!NavMesh.SamplePosition(to, out var hit, 2f, NavMesh.AllAreas)) return;
+            Vector3 to = danger + away.normalized * distance;
+            if (!NavMesh.SamplePosition(to, out var hit, 4f, NavMesh.AllAreas)) return false;
             ReleaseCover();
-            spot = hit.position; evadeT = 1.5f;
+            spot = hit.position; evadeT = time;
             CurrentState = State.Evade;
             SetDest(spot, runSpeed);
-            Evades++;
+            return true;
         }
 
         Vector3 Forward()

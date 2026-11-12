@@ -36,8 +36,12 @@
   - the other mechs fire machine guns;
   - the tankette burns at 14 m.
 - Grenadiers, flamethrower troops and sappers also carry a rifle for targets out of their own weapon's reach.
-- Armour takes a tenth of a bullet's damage and half of a flame's. Shells, grenades, charges and bombs do full damage. Vehicles never take cover; they close in until their weapon reaches.
+- Armour takes a tenth of a bullet's damage, a quarter of a grenade's and half of a flame's. Only shells, charges and bombs do full damage to a tank. Tanks are tougher: 28, 20 and 50 points, and the assault mech 34. Vehicles never take cover; they close in until their weapon reaches.
 - Turrets and mech torsos turn towards their target before they fire. A knocked-out vehicle blows up, goes dark and smokes.
+- **Each weapon has its job.** Rifles and machine guns go for infantry; grenades for men in cover; cannons for vehicles first and buildings next; flamethrowers for cover and bunkers.
+- **Sappers** go for the nearest enemy building within 90 m. The sapper sets a charge against the wall, runs clear and the charge blows up three seconds later (14 damage, 4 m blast). The men near the charge may run. With no building near, it sticks the charge on an enemy vehicle, and the charge rides along. Sappers are the only infantry that kills tanks.
+- **The light mech is a grenade launcher** (34 m, 3 m blast) and **the scout mech is anti-aircraft:** it fires flak at enemy planes within 60 m, with the same shells as the tower, and a light shell at the ground when no plane is near.
+- **Troop bar:** a button per unit type at the top of the screen, in the battle (mouse or finger) and in the RTS test screen. A press sends a squad of four infantry or one vehicle from your base towards the enemy command post. Each type then waits its own cooldown (18 s for riflemen, up to 60 s for the heavy tank), shown on the button.
 
 **Soldier AI**
 - **Suppression:** fire landing around a soldier keeps his head down. Machine guns suppress most, then bursting shells, grenades, flames and bombs, then single rifle shots.

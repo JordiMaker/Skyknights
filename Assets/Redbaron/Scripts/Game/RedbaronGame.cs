@@ -108,6 +108,7 @@ namespace Redbaron
             Breakable.RestoreAll();
             foreach (var p in CommandPost.All) p.ResetPost();
             if (spawner != null) spawner.ResetWaves();
+            if (TroopBar.Instance != null) TroopBar.Instance.ResetAll();
             Log("Nueva batalla: las oleadas salen de las bases");
         }
 

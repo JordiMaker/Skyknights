@@ -171,7 +171,7 @@ namespace Redbaron
         /// and flames only scorch buildings. Everything else takes it in full.</summary>
         public static float Factor(DamageKind how, TargetKind target)
         {
-            if (target == TargetKind.Vehicle) return how == DamageKind.Bullet ? 0.1f : how == DamageKind.Fire ? 0.5f : 1f;
+            if (target == TargetKind.Vehicle) return how == DamageKind.Bullet ? 0.1f : how == DamageKind.Fragment ? 0.25f : how == DamageKind.Fire ? 0.5f : 1f;
             if (target != TargetKind.Soldier && how == DamageKind.Fire) return 0.5f;
             return 1f;
         }

@@ -754,6 +754,7 @@ GameObject:
   - component: {fileID: 1682496129}
   - component: {fileID: 1682496130}
   - component: {fileID: 1682496131}
+  - component: {fileID: 1682496132}
   m_Layer: 0
   m_Name: Redbaron
   m_TagString: Untagged
@@ -843,6 +844,8 @@ MonoBehaviour:
     hit: 0.55
     damage: 1
     splash: 0
+    recruitCount: 4
+    recruitEvery: 18
   - name: Ametrallador
     unitClass: 0
     modelsEntente:
@@ -862,6 +865,8 @@ MonoBehaviour:
     hit: 0.22
     damage: 1
     splash: 0
+    recruitCount: 4
+    recruitEvery: 22
   - name: Granadero
     unitClass: 0
     modelsEntente:
@@ -881,6 +886,8 @@ MonoBehaviour:
     hit: 0.6
     damage: 2
     splash: 2.5
+    recruitCount: 4
+    recruitEvery: 22
   - name: Lanzallamas
     unitClass: 0
     modelsEntente:
@@ -900,6 +907,8 @@ MonoBehaviour:
     hit: 0.85
     damage: 2
     splash: 2
+    recruitCount: 4
+    recruitEvery: 26
   - name: Zapador
     unitClass: 0
     modelsEntente:
@@ -914,11 +923,13 @@ MonoBehaviour:
     maxHeight: 6
     weapon: 4
     range: 4.5
-    cooldown: 6
+    cooldown: 8
     shots: 1
     hit: 1
-    damage: 12
-    splash: 2.5
+    damage: 14
+    splash: 4
+    recruitCount: 4
+    recruitEvery: 26
   - name: Tanque ligero
     unitClass: 1
     modelsEntente:
@@ -927,7 +938,7 @@ MonoBehaviour:
     - {fileID: 919132149155446097, guid: e971678e29af242ff86b0d6253e48339, type: 3}
     minCount: 1
     maxCount: 1
-    hp: 24
+    hp: 28
     walkSpeed: 2.2
     runSpeed: 2.64
     maxHeight: 6
@@ -938,6 +949,8 @@ MonoBehaviour:
     hit: 0.5
     damage: 3
     splash: 2.5
+    recruitCount: 1
+    recruitEvery: 40
   - name: Tanqueta lanzallamas
     unitClass: 1
     modelsEntente:
@@ -946,7 +959,7 @@ MonoBehaviour:
     - {fileID: 919132149155446097, guid: 4938107a646784fdfbba776bd318b4cf, type: 3}
     minCount: 1
     maxCount: 1
-    hp: 18
+    hp: 20
     walkSpeed: 2.6
     runSpeed: 3.1200001
     maxHeight: 6
@@ -957,6 +970,8 @@ MonoBehaviour:
     hit: 0.9
     damage: 3
     splash: 2.5
+    recruitCount: 1
+    recruitEvery: 36
   - name: Tanque pesado
     unitClass: 1
     modelsEntente:
@@ -965,7 +980,7 @@ MonoBehaviour:
     - {fileID: 919132149155446097, guid: 4efa228023d364499834c545da54f5ae, type: 3}
     minCount: 1
     maxCount: 1
-    hp: 40
+    hp: 50
     walkSpeed: 1.6
     runSpeed: 1.9200001
     maxHeight: 6
@@ -976,6 +991,8 @@ MonoBehaviour:
     hit: 0.5
     damage: 4
     splash: 3
+    recruitCount: 1
+    recruitEvery: 60
   - name: Mech ligero
     unitClass: 2
     modelsEntente:
@@ -984,17 +1001,19 @@ MonoBehaviour:
     - {fileID: 919132149155446097, guid: baf3b9154a84548bd9bf0f7944e0cb41, type: 3}
     minCount: 1
     maxCount: 1
-    hp: 14
+    hp: 16
     walkSpeed: 2.4
     runSpeed: 2.88
     maxHeight: 6
-    weapon: 1
-    range: 40
-    cooldown: 2.5
-    shots: 4
-    hit: 0.3
-    damage: 1
-    splash: 0
+    weapon: 2
+    range: 34
+    cooldown: 3.2
+    shots: 1
+    hit: 0.55
+    damage: 2
+    splash: 3
+    recruitCount: 1
+    recruitEvery: 40
   - name: Mech explorador
     unitClass: 2
     modelsEntente:
@@ -1007,13 +1026,15 @@ MonoBehaviour:
     walkSpeed: 3.4
     runSpeed: 4.0800004
     maxHeight: 6
-    weapon: 1
-    range: 50
-    cooldown: 2.5
-    shots: 3
-    hit: 0.3
+    weapon: 6
+    range: 60
+    cooldown: 2.2
+    shots: 1
+    hit: 0.4
     damage: 1
-    splash: 0
+    splash: 2
+    recruitCount: 1
+    recruitEvery: 40
   - name: Mech de asalto
     unitClass: 2
     modelsEntente:
@@ -1022,7 +1043,7 @@ MonoBehaviour:
     - {fileID: 919132149155446097, guid: a897b2a1681714df19759003d9c5d76c, type: 3}
     minCount: 1
     maxCount: 1
-    hp: 30
+    hp: 34
     walkSpeed: 1.8
     runSpeed: 2.16
     maxHeight: 6
@@ -1033,6 +1054,8 @@ MonoBehaviour:
     hit: 0.5
     damage: 3
     splash: 3
+    recruitCount: 1
+    recruitEvery: 50
   rotation:
   - Fusilero
   - Tanque ligero
@@ -1047,6 +1070,13 @@ MonoBehaviour:
   - Fusilero
   - Mech de asalto
   laneStep: 4
+  squads:
+    breakAtLoss: 0.5
+    breakAtSuppression: 0.65
+    fallbackTime: 8
+    regroupTime: 14
+    escortRange: 70
+    mergeRange: 16
   kitMaterial: {fileID: 2100000, guid: 092fd76431b99478199e3ed7ae481b94, type: 2}
   waveEvery: 28
   minPerLane: 2
@@ -1072,6 +1102,7 @@ MonoBehaviour:
   restartDelay: 12
   showPanel: 1
   speedKeys: 1e0100001f01000020010000i
+  globalOrderKeys: 1
   lastEvent: Las oleadas salen de las bases
 --- !u!114 &1682496127
 MonoBehaviour:
@@ -1211,6 +1242,23 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 09cdaa8c5fc0c42a788e1118c2a8be22, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Redbaron.PauseMenu
+--- !u!114 &1682496132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1682496123}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6cb9f6e4ab7d44ff98ce9d719bd5e013, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Redbaron.TroopBar
+  spawner: {fileID: 1682496125}
+  showBar: 1
+  cooldownScale: 1
+  left: 345
+  rightMargin: 170
 --- !u!4 &1723907225 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6145208819103857560, guid: 2dcbb60d7f41248e6ac9f38b76804926, type: 3}

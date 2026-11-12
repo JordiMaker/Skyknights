@@ -37,9 +37,7 @@ namespace Redbaron
         float cd, yaw, pitch, sweepT;
         BiplaneAI target;
         Vector3 scale0;
-
-        class Shell { public Vector3 from, to; public float t, duration; }
-        readonly List<Shell> shells = new List<Shell>();
+        FlakGun gun;
 
         // ------------------------------------------------------------ Building
         /// <summary>Puts a tower on the ground at ground, scaled to height (m), painted in its side's colours and facing
@@ -123,6 +121,7 @@ namespace Redbaron
             Health = GetComponent<Health>();
             scale0 = transform.localScale;
             cd = 1f + Random.value;
+            gun = new FlakGun(Health.team, "La torre antiaérea") { shellSpeed = shellSpeed, burstRadius = burstRadius, scatter = scatter };
             Health.Died += (h, src) =>
             {
                 Combat.Explosion(transform.position + Vector3.up * 2f, true);
@@ -166,7 +165,8 @@ namespace Redbaron
         void Update()
         {
             float dt = Time.deltaTime;
-            UpdateShells(dt);
+            gun.team = Health.team;
+            gun.Update(dt);
             if (!Health.Alive || (RedbaronGame.Instance != null && RedbaronGame.Instance.GameOver)) return;
 
             cd -= dt;
@@ -200,14 +200,43 @@ namespace Redbaron
             cd = fireEvery;
             float dist = new Vector2(targetNow.x - muzzle.x, targetNow.z - muzzle.z).magnitude;
             Vector3 heading = transform.rotation * Quaternion.Euler(0, yaw, 0) * Vector3.forward;
-            Vector3 burst = muzzle + heading * dist + Random.insideUnitSphere * scatter;
-            burst.y = float.IsNaN(BiplaneAI.FlightAltitude) ? targetNow.y : BiplaneAI.FlightAltitude; // every burst is on the flight plane
+            gun.Fire(muzzle, heading, dist, targetNow.y);
+        }
+    }
+
+    /// <summary>
+    /// The shells of an anti-aircraft gun: the tower's, or the scout mech's (SoldierAI). A shell flies along the gun's
+    /// heading and bursts at the distance the target had when it was fired, on the flight plane; a plane whose edge is
+    /// within burstRadius of the burst loses one energy point.
+    /// </summary>
+    public class FlakGun
+    {
+        public float shellSpeed = 110f, burstRadius = 5f, scatter = 2.5f;
+        public Team team;
+        /// <summary>Who gets the kill in the battle log.</summary>
+        public string by;
+        /// <summary>Shells fired and planes hit, for the tests.</summary>
+        public static int Fired, Hits;
+
+        class Shell { public Vector3 from, to; public float t, duration; }
+        readonly List<Shell> shells = new List<Shell>();
+
+        public FlakGun(Team team, string by) { this.team = team; this.by = by; }
+
+        /// <summary>A shell from muzzle along heading (flat), bursting dist metres out at the planes' height (targetY with no flight plane).</summary>
+        public void Fire(Vector3 muzzle, Vector3 heading, float dist, float targetY)
+        {
+            heading.y = 0;
+            if (heading.sqrMagnitude < 1e-4f) return;
+            Vector3 burst = muzzle + heading.normalized * dist + Random.insideUnitSphere * scatter;
+            burst.y = float.IsNaN(BiplaneAI.FlightAltitude) ? targetY : BiplaneAI.FlightAltitude; // every burst is on the flight plane
             shells.Add(new Shell { from = muzzle, to = burst, duration = Mathf.Max(0.05f, Vector3.Distance(muzzle, burst) / shellSpeed) });
             Sfx.Thud(muzzle, 0.8f);
             Combat.Puff(muzzle, new Color(0.85f, 0.8f, 0.7f, 0.6f), 0.4f, 1.2f, 0.5f);
+            Fired++;
         }
 
-        void UpdateShells(float dt)
+        public void Update(float dt)
         {
             for (int i = shells.Count - 1; i >= 0; i--)
             {
@@ -229,9 +258,9 @@ namespace Redbaron
             Combat.Puff(p, new Color(0.13f, 0.12f, 0.11f, 0.9f), 1.6f, 4f, 0.4f);
             foreach (var plane in new List<BiplaneAI>(BiplaneAI.All))
             {
-                if (!plane.Alive || plane.team == Health.team) continue;
+                if (!plane.Alive || plane.team == team) continue;
                 Vector3 d = plane.Body.Position - p; d.y = 0;
-                if (d.magnitude <= burstRadius + plane.BodyRadius) plane.TakeHit("La torre antiaérea", Health.team);
+                if (d.magnitude <= burstRadius + plane.BodyRadius) { plane.TakeHit(by, team); Hits++; }
             }
         }
     }

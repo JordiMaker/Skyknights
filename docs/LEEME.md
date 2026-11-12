@@ -528,19 +528,29 @@ The waves now bring eleven unit types: five infantry types, three tanks and thre
 | Ametrallador | Ametrallador | 2 | Machine gun, 45 m, bursts of four every 4.5 s |
 | Granadero | Granadero | 2 | Grenades, 26 m, 2.5 m blast |
 | Lanzallamas | Lanzallamas | 2 | Flamethrower, 12 m; closes in on anything within 25 m |
-| Zapador | Zapador | 2 | Demolition charge at 4.5 m, 12 damage; goes for buildings and vehicles first |
-| Tanque ligero | Lince | 24 | Turret cannon, 45 m, 2.5 m blast |
-| Tanqueta lanzallamas | Escarabajo | 18 | Turret flamethrower, 14 m |
-| Tanque pesado | Mastodonte | 40 | Hull cannon, 50 m, 3 m blast (it turns its hull to aim) |
-| Mech ligero | Tetera | 14 | Machine guns, 40 m |
-| Mech explorador | Zancudo | 16 | Machine guns, 50 m, fast |
-| Mech de asalto | Caldera | 30 | Cannon, 45 m, 3 m blast |
+| Zapador | Zapador | 2 | Demolition charge with a 3 s fuse, 14 damage, 4 m blast; goes for the nearest enemy building within 90 m, then for vehicles |
+| Tanque ligero | Lince | 28 | Turret cannon, 45 m, 2.5 m blast |
+| Tanqueta lanzallamas | Escarabajo | 20 | Turret flamethrower, 14 m |
+| Tanque pesado | Mastodonte | 50 | Hull cannon, 50 m, 3 m blast (it turns its hull to aim) |
+| Mech ligero | Tetera | 16 | Grenade launcher, 34 m, 3 m blast; goes for men in cover |
+| Mech explorador | Zancudo | 16 | Anti-aircraft gun, 60 m: flak at enemy planes first, a light shell against the ground; fast |
+| Mech de asalto | Caldera | 34 | Cannon, 45 m, 3 m blast |
 
 Grenadiers, flamethrower troops and sappers also carry a rifle for targets beyond their own weapon. Machine gunners and riflemen do not need one.
 
+**Each weapon has its job.**
+- Rifles and machine guns: infantry in the open. Against armour they are nearly useless, so they go for soldiers.
+- Grenades and the grenade-launcher mech: men in cover. Fragments do a quarter of their damage to armour.
+- Flamethrowers: cover and bunkers.
+- Sappers: buildings. The sapper walks up to the nearest enemy building, sets a charge against the wall, runs about 9 m clear and the charge blows up three seconds later. The men around the charge see it and may run. With no building within 90 m it sticks the charge on an enemy vehicle, and the charge travels with it. Sappers are the only infantry that kills tanks.
+- Cannons (tanks, assault mech): vehicles first, then buildings near, then infantry.
+- The anti-aircraft mech: enemy planes within 60 m, with the same flak shells as the tower (FlakGun, shared). While a plane is in reach it does not fire at the ground. Its gun lifts up to 75°.
+
 **Waves (WaveSpawner → Rotation, Lane Step).** Each wave, every lane sends the next entry of the rotation. Lane 2 starts 4 entries further along and lane 3 starts 8 entries further along. The default rotation alternates an infantry squad and a vehicle, and the vehicles alternate between tanks and mechs. With an even lane step, all three lanes send infantry in one wave and vehicles in the next. An infantry squad has 2–4 men, and a vehicle comes alone. A vehicle counts as three units towards the cap of 60 per side.
 
-**Damage (Combat.Factor).** Bullets do a tenth of their damage to vehicles, and flames do half. Flames do half to buildings too. Shells, grenades, charges and bombs do full damage to everything. Blasts lose strength towards their edge, down to 30 % at the rim, and never hurt their own side, the same as the bombs. A bomb does 14 damage to a vehicle within 5 m.
+**Damage (Combat.Factor).** Armour is what makes a tank a tank: bullets do a tenth of their damage to vehicles, grenade fragments a quarter, and flames half. Shells, charges and bombs (DamageKind.Blast) do full damage to everything. Flames do half to buildings too. Blasts lose strength towards their edge, down to 30 % at the rim, and never hurt their own side, the same as the bombs. A bomb does 14 damage to a vehicle within 5 m.
+
+**Troop bar (TroopBar, Scripts/Game).** A button per unit type, in the battle (mouse or finger) and in the RTS test screen. A press puts a squad of four infantry or one vehicle at your base, in the next lane, heading for the enemy command post. Each type then waits its own cooldown (UnitType → Recruit Every): 18 s for riflemen, 22–26 s for the other infantry, 36–60 s for vehicles; the button shows the seconds left and a yellow bar filling up. `cooldownScale` on the component speeds everything up or slows it down. The bar sits at the top of the screen, to the right of the game panel, and leaves the phone's camera button free. A new battle clears every cooldown.
 
 **Behaviour.**
 - Units pick the nearest enemy. A weapon that barely scratches armour (rifles, machine guns) prefers soldiers.
@@ -659,7 +669,7 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
 - **Hold position:** they do not move at all.
 - An attack order is obeyed whatever the stance.
 
-**Recruiting.** The buttons put any of the 11 unit types at your base, taking the three lanes in turn. Infantry comes in squads of 4 (Squad Size) and vehicles one at a time. There is no cost or limit: it is a test screen.
+**Recruiting.** The buttons put any of the 11 unit types at your base, taking the three lanes in turn. Infantry comes in squads of 4 (Squad Size) and vehicles one at a time. Each type has the troop bar's cooldown (see "Troop bar"): the button shows the seconds left and stays off until then.
 
 **On screen.**
 - Green rings mark your selection, and a red ring the enemy or building you are looking at.
