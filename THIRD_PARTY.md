@@ -12,8 +12,8 @@ Unity keeps the same asset IDs when a package is imported, so the scene and pref
 | DOTween (HOTween v2) | Demigiant | `Assets/Plugins/Demigiant` | Animations Quick RTS needs | After import: Tools > Demigiant > DOTween Utility Panel > Setup DOTween. |
 | Quick Outline | Chris Nolet | `Assets/QuickOutline` | Selection outlines in Quick RTS | none |
 | Toon Soldiers WW2 demo | Polygon Blacksmith | `Assets/ToonSoldiers_WW2_demo` | Infantry model and animations | none |
-| Low poly trees - free nature pack (Happy Little Trees) | Nebula | `Assets/Happy Little Trees - Free nature pack by Nebula` | Trees, dead trees and grass | Its materials are URP; convert them (see below). |
-| Low Poly Atmospheric Locations Pack | Palmov Island | `Assets/Palmov Island` | Barrels, boxes and other base props | none |
+| Low poly trees - free nature pack (Happy Little Trees) | Nebula | `Assets/Happy Little Trees - Free nature pack by Nebula` | Trees, dead trees, grass, mountain rocks and the boulders at the foot of the cliff | Its materials are URP; convert them (see below). |
+| Low Poly Atmospheric Locations Pack | Palmov Island | `Assets/Palmov Island` | The cliff around the map ("stone large" rocks), and barrels, boxes and other base props | none |
 | Lean Touch | Carlos Wilkes | `Assets/Plugins/CW` | Reading touches for the phone controls | none |
 | Ultimate Joystick Lite | Format Games | `Assets/UltimateJoystickLite` | The phone's flight joystick | Needs four fixes (see below). |
 | Vehicle - Essentials | NoxSound | `Assets/Vehicle_Essentials` | Engine sounds | Only three clips are used (see below). |

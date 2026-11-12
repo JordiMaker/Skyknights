@@ -1,0 +1,172 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1b5498e7101a5424a9c93886906fafb1, type: 3}
+  m_Name: Redbaron_Catalogo
+  m_EditorClassIdentifier: Assembly-CSharp::Redbaron.RedbaronCatalog
+  ships:
+  - name: "Halc\xF3n de Lat\xF3n"
+    model: {fileID: 919132149155446097, guid: f0190e227445e4952a6e50b0b4fa0f91, type: 3}
+    side: 0
+    role: Caza triplano
+    size: "7,5 \xD7 2,7 \xD7 6,8 m"
+    description: "Triplano de caza de las Potencias Centrales. Sus tres alas apiladas dan mucha sustentaci\xF3n en poco espacio."
+  - name: "Halc\xF3n de Lat\xF3n (curvo)"
+    model: {fileID: 919132149155446097, guid: 9d3f3f55adf384a65a49764041856dd0, type: 3}
+    side: 0
+    role: Caza triplano
+    size: "7,5 \xD7 2,7 \xD7 6,8 m"
+    description: "La versi\xF3n curva del Halc\xF3n: fuselaje torneado y alas de puntas redondeadas."
+  - name: "V\xEDbora de Vapor"
+    model: {fileID: 919132149155446097, guid: 067723f9f32bf4cba8c5dbd5770be67b, type: 3}
+    side: 1
+    role: Caza biplano
+    size: "8,6 \xD7 3,1 \xD7 7,7 m"
+    description: Biplano de caza de la Entente, con los tubos de vapor a la vista.
+  - name: "V\xEDbora de Vapor (curva)"
+    model: {fileID: 919132149155446097, guid: 08c9dc5bd9c2544f5a4c3533983cef52, type: 3}
+    side: 1
+    role: Caza biplano
+    size: "8,6 \xD7 3,1 \xD7 7,7 m"
+    description: "La versi\xF3n curva de la V\xEDbora: fuselaje torneado, timones curvos y tubos de vapor doblados."
+  - name: Aguja
+    model: {fileID: 919132149155446097, guid: a67c04f6dc2ea42009e768e34e0618e3, type: 3}
+    side: 0
+    role: Caza monoplano
+    size: "9,6 \xD7 2,8 \xD7 7,0 m"
+    description: Un solo par de alas y un fuselaje afilado, pensado para la velocidad.
+  - name: Mantis
+    model: {fileID: 919132149155446097, guid: 8e1bc1b742b6743f28510b822ccd2264, type: 3}
+    side: 1
+    role: Caza empujador
+    size: "8,6 \xD7 2,9 \xD7 8,7 m"
+    description: "La h\xE9lice va detr\xE1s de la cabina y empuja el avi\xF3n, as\xED que el morro queda libre para la ametralladora."
+  - name: Lechuza
+    model: {fileID: 919132149155446097, guid: c01f872e40e0a45eebf90fb05dfbd1cb, type: 3}
+    side: 0
+    role: Caza nocturno
+    size: "8,2 \xD7 3,7 \xD7 6,9 m"
+    description: Caza nocturno con un reflector para buscar blancos en la oscuridad.
+  - name: Corneja
+    model: {fileID: 919132149155446097, guid: 48651b57718b446eb8f1b6b9c55e0830, type: 3}
+    side: 1
+    role: Biplaza de reconocimiento
+    size: "11,4 \xD7 3,1 \xD7 8,2 m"
+    description: "Biplaza: el piloto delante y un observador detr\xE1s para vigilar las l\xEDneas enemigas."
+  - name: Garza
+    model: {fileID: 919132149155446097, guid: 6d3cb00496bfd4eeebd952b5ee72d6e7, type: 3}
+    side: 0
+    role: "Hidroavi\xF3n de patrulla"
+    size: "12,0 \xD7 4,1 \xD7 8,1 m"
+    description: "Hidroavi\xF3n con flotadores, para patrullar r\xEDos y costas."
+  - name: "Lib\xE9lula"
+    model: {fileID: 919132149155446097, guid: 5092a55e4b7e84f87b93bcfdc00bc8b5, type: 3}
+    side: 1
+    role: "Giroc\xF3ptero de observaci\xF3n"
+    size: "9,1 \xD7 3,6 \xD7 10,1 m"
+    description: "Un rotor de 10 m sobre la cabina y una h\xE9lice de empuje: vigila el frente desde el aire."
+  - name: "Lib\xE9lula (curva)"
+    model: {fileID: 919132149155446097, guid: 206dcef53068e4b188dc6d095dd1f79e, type: 3}
+    side: 1
+    role: "Giroc\xF3ptero de observaci\xF3n"
+    size: "9,1 \xD7 3,6 \xD7 10,1 m"
+    description: "La versi\xF3n curva de la Lib\xE9lula, con c\xFApula y fuselaje torneado."
+  - name: "Murci\xE9lago"
+    model: {fileID: 919132149155446097, guid: c02c3b241e062407888aa89364759a77, type: 3}
+    side: 0
+    role: "Ornit\xF3ptero experimental"
+    size: "13,1 \xD7 3,3 \xD7 6,7 m"
+    description: "Un prototipo que vuela batiendo las alas, como un murci\xE9lago."
+  - name: Coloso
+    model: {fileID: 919132149155446097, guid: 0ac95fe4e07eb4c0cb619367a7211586, type: 3}
+    side: 1
+    role: Bombardero trimotor
+    size: "22,0 \xD7 5,4 \xD7 14,9 m"
+    description: 'El bombardero pesado de la Entente: tres motores y 22 m de envergadura.'
+  - name: "Leviat\xE1n"
+    model: {fileID: 919132149155446097, guid: e1c396188d7ec41168d72ada9b378bab, type: 3}
+    side: 0
+    role: Bombardero cuatrimotor
+    size: "24,0 \xD7 6,9 \xD7 16,4 m"
+    description: 'El bombardero pesado de las Potencias Centrales: cuatro motores y 24 m de envergadura.'
+  - name: "Leviat\xE1n (curvo)"
+    model: {fileID: 919132149155446097, guid: dec25d2db4f5c4c699f1de2ba5bfaf52, type: 3}
+    side: 0
+    role: Bombardero cuatrimotor
+    size: "24,0 \xD7 6,9 \xD7 16,4 m"
+    description: "La versi\xF3n curva del Leviat\xE1n, con g\xF3ndolas en forma de gota."
+  shipStats:
+  - label: "Energ\xEDa"
+    value: 6 impactos
+  - label: "Munici\xF3n"
+    value: 80 balas
+  - label: Bombas
+    value: 4
+  - label: Velocidad
+    value: 11 a 26 m/s
+  - label: Alabeo
+    value: "150\xB0/s"
+  - label: "Giro m\xE1ximo"
+    value: "65\xB0/s"
+  - label: Cadencia
+    value: "una r\xE1faga cada 0,4 s"
+  shipStatsNote: 'En la batalla todas las naves vuelan igual por ahora: lo que cambia es el modelo.'
+  buildings:
+  - name: Puesto de mando
+    model: 0
+    count: Uno por bando
+    stats:
+    - label: Resistencia
+      value: 150
+    - label: "Da\xF1o por bomba"
+      value: 12 (a menos de 9 m)
+    - label: "Tama\xF1o"
+      value: "15 \xD7 5 \xD7 10 m"
+    - label: Si cae
+      value: gana el otro bando
+    description: "El coraz\xF3n de cada base. Cuando su barra llega a cero, el bando contrario gana y la batalla vuelve a empezar."
+  - name: Casamata
+    model: 1
+    count: Seis por bando
+    stats:
+    - label: Resistencia
+      value: 20
+    - label: "Da\xF1o por bomba"
+      value: 6 (a menos de 8 m)
+    - label: Arma
+      value: ametralladora
+    - label: Alcance
+      value: 42 m
+    - label: "R\xE1faga"
+      value: 2 disparos cada 1,4 s
+    description: "Nido de ametralladora de hormig\xF3n con sacos terreros. Dispara a la infanter\xEDa enemiga que se acerca; cuatro bombas bien puestas lo destruyen."
+  - name: Hangar
+    model: 2
+    count: Dos por bando
+    stats:
+    - label: Resistencia
+      value: indestructible
+    - label: "Funci\xF3n"
+      value: "despegue y reaparici\xF3n"
+    - label: "Tama\xF1o"
+      value: "8,6 \xD7 5 \xD7 12 m"
+    description: "Aqu\xED despegan y reaparecen los aviones de su bando. Las bombas que caen sobre el aer\xF3dromo enemigo suman en el marcador \xABBombas en aer\xF3dromo\xBB."
+  - name: Punto de recarga
+    model: 3
+    count: "Uno por aer\xF3dromo"
+    stats:
+    - label: Recupera
+      value: "energ\xEDa, munici\xF3n y bombas"
+    - label: Alcance
+      value: "4 m m\xE1s el tama\xF1o del avi\xF3n"
+    - label: Espera
+      value: 6 s entre usos
+    description: "Una caja de suministros que flota sobre la pista, a la altura de vuelo. Atravi\xE9sala con tu avi\xF3n para recargar; solo sirve a los aviones de su bando."

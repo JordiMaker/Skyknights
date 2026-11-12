@@ -59,6 +59,17 @@ namespace Redbaron
         public GameObject[] basePropPrefabs;
         public int basePropsPerSite = 6;
 
+        [Header("Boundary wall")]
+        [Tooltip("Complete rock models that build the cliff around the map, in two overlapping tiers. Empty = the old generated wall is drawn instead.")]
+        public GameObject[] wallRockPrefabs;
+        [Tooltip("Boulders along the foot of the cliff. Decoration only: no colliders.")]
+        public GameObject[] wallBoulderPrefabs;
+        [Tooltip("Height (m) of each lower-tier rock. The upper tier fills the rest, up to the wall's rim.")]
+        public Vector2 wallRockHeight = new Vector2(13f, 17f);
+        [Tooltip("Distance between neighbouring rocks, as a share of a rock's width. Below 1 they overlap, so no gaps show.")]
+        [Range(0.3f, 1f)] public float wallRockOverlap = 0.55f;
+        public int wallBoulderCount = 70;
+
         [Header("Estructuras (opcional: si se dejan vacías se generan low poly)")]
         public GameObject bunkerPrefab;
         public GameObject commandPostPrefab;
@@ -319,8 +330,7 @@ namespace Redbaron
                     var go = Instantiate(Pick(mountainRockPrefabs, r), new Vector3(x, s.h, z), Quaternion.Euler(r.Range(-12f, 12f), r.Next() * 360f, r.Range(-12f, 12f)), g);
                     FitHeight(go, hgt);
                     go.transform.position -= Vector3.up * hgt * 0.3f;
-                    if (go.GetComponentInChildren<Collider>() == null)
-                        foreach (var mf in go.GetComponentsInChildren<MeshFilter>()) mf.gameObject.AddComponent<MeshCollider>().sharedMesh = mf.sharedMesh;
+                    if (go.GetComponentInChildren<Collider>() == null) AddBoxColliders(go, 0.8f);
                     placed++;
                 }
             }
@@ -440,11 +450,13 @@ namespace Redbaron
             float[] rows = { 0, 0.1f, 0.22f, 0.36f, 0.5f, 0.64f, 0.78f, 0.9f, 1 };
             int R = rows.Length, N = per.Count;
             var cols = new List<Vector3[]>();
+            var bases = new float[N]; var rims = new float[N];
             for (int j = 0; j < N; j++)
             {
                 var p = per[j];
                 float bas = RedbaronMap.Height(p.x, p.y);
                 float rim = RedbaronMap.WallHeight + Mathf.Sin(j * 0.07f) * 2.5f + Mathf.Sin(j * 0.23f) * 1.2f;
+                bases[j] = bas; rims[j] = rim;
                 var col = new Vector3[R + 1];
                 for (int r = 0; r < R; r++)
                 {
@@ -472,7 +484,10 @@ namespace Redbaron
             };
             Color top = new Color32(0x66, 0x75, 0x40, 255);
             Vector3 center = new Vector3(RedbaronMap.WorldW / 2, 0, RedbaronMap.WorldL / 2);
+            bool rockWall = wallRockPrefabs != null && wallRockPrefabs.Length > 0;
             var acc = new MeshAccumulator();
+            var plateau = new MeshAccumulator();
+            Vector3 down = Vector3.down * 2f; // the plateau sits just under the rocks' tops
             for (int j = 0; j < N; j++)
                 for (int r = 0; r < R; r++)
                 {
@@ -481,9 +496,117 @@ namespace Redbaron
                     Vector3 inward = center - a; inward.y = 0; inward = inward.normalized + Vector3.up * 0.5f;
                     AddFacing(acc, a, b, c, col, inward);
                     AddFacing(acc, b, d, c, col, inward);
+                    if (r == R - 1) { AddFacing(plateau, a + down, b + down, c + down, col, Vector3.up); AddFacing(plateau, b + down, d + down, c + down, col, Vector3.up); }
                 }
             var go = acc.ToObject("Pared", Root, vertexColorMaterial, true);
             go.isStatic = true;
+            if (!rockWall) return;
+
+            // The generated wall stays as an invisible collider: planes, bullets and the NavMesh still stop at it.
+            go.GetComponent<MeshRenderer>().enabled = false;
+            var pl = plateau.ToObject("Pared_Meseta", Root, vertexColorMaterial, false);
+            pl.isStatic = true;
+            BuildRockWall(per, cols, bases, rims);
+        }
+
+        /// <summary>The visible cliff: complete rock models in two overlapping tiers along the wall, plus boulders at its foot.
+        /// Uses its own random stream, so the rest of the map does not change.</summary>
+        void BuildRockWall(List<Vector4> per, List<Vector3[]> cols, float[] bases, float[] rims)
+        {
+            var g = Group("Pared_Rocas");
+            var r = new Mulberry32((uint)seed * 53u + 11u);
+            int N = per.Count;
+            // two walks along the wall; the upper one starts half a rock later so the seams do not line up
+            for (int tier = 0; tier < 2; tier++)
+            {
+                float gap = tier == 0 ? 0f : 4f, run = 0f;
+                for (int j = 0; j < N; j++)
+                {
+                    Vector3 p0 = cols[j][0], p1 = cols[(j + 1) % N][0];
+                    run += Vector3.Distance(new Vector3(p0.x, 0, p0.z), new Vector3(p1.x, 0, p1.z));
+                    if (run < gap) continue;
+                    run = 0f;
+                    var n = new Vector2(per[j].z, per[j].w);
+                    float bottom, height, outward;
+                    if (tier == 0) { bottom = bases[j] - 1.5f; height = r.Range(wallRockHeight.x, wallRockHeight.y); outward = r.Range(0f, 1.2f); }
+                    else
+                    {
+                        bottom = bases[j] + wallRockHeight.x * 0.62f;
+                        height = Mathf.Max(6f, rims[j] + r.Range(0.6f, 2.4f) - bottom);
+                        outward = r.Range(2f, 3.5f);
+                    }
+                    var rock = PlaceWallRock(Pick(wallRockPrefabs, r), g, p0, n, bottom, height, outward, r, out float width);
+                    foreach (var rd in rock.GetComponentsInChildren<Renderer>())
+                        rd.shadowCastingMode = tier == 0 ? ShadowCastingMode.On : ShadowCastingMode.Off;
+                    AddBoxColliders(rock, 0.85f);
+                    gap = width * wallRockOverlap;
+                }
+            }
+            // Corners: each side pushes its rocks out along its own normal, which leaves a notch behind the corner.
+            // Fill it with rocks pushed out along the diagonal.
+            for (int j = 0; j < N; j++)
+            {
+                if (Mathf.Abs(per[j].z) < 0.5f || Mathf.Abs(per[j].w) < 0.5f) continue;
+                var n = new Vector2(per[j].z, per[j].w);
+                for (int k = 0; k < 4; k++)
+                {
+                    bool upper = k >= 2;
+                    float bottom = upper ? bases[j] + wallRockHeight.x * 0.62f : bases[j] - 1.5f;
+                    float height = upper ? Mathf.Max(6f, rims[j] + r.Range(0.6f, 2.4f) - bottom) : r.Range(wallRockHeight.x, wallRockHeight.y);
+                    var rock = PlaceWallRock(Pick(wallRockPrefabs, r), g, cols[j][0], n, bottom, height, (k % 2) * 4f + r.Range(0f, 1f), r, out _);
+                    foreach (var rd in rock.GetComponentsInChildren<Renderer>()) rd.shadowCastingMode = upper ? ShadowCastingMode.Off : ShadowCastingMode.On;
+                    AddBoxColliders(rock, 0.85f);
+                }
+            }
+            if (wallBoulderPrefabs != null && wallBoulderPrefabs.Length > 0)
+                for (int k = 0; k < wallBoulderCount; k++)
+                {
+                    int j = Mathf.FloorToInt(r.Next() * N) % N;
+                    var n = new Vector2(per[j].z, per[j].w);
+                    float h = r.Range(2.2f, 5f);
+                    var b = PlaceWallRock(Pick(wallBoulderPrefabs, r), g, cols[j][0], n, bases[j] - h * 0.3f, h, -r.Range(1.5f, 4f), r, out _);
+                    foreach (var rd in b.GetComponentsInChildren<Renderer>()) rd.shadowCastingMode = ShadowCastingMode.Off;
+                }
+            if (Application.isPlaying) StaticBatchingUtility.Combine(g.gameObject);
+        }
+
+        /// <summary>Puts one rock against the wall: scaled to the height, its bottom at bottomY, its inner face near the
+        /// wall line at basePoint (n = outward normal in world xz), pushed outward by the given metres. Returns its width along the wall.</summary>
+        GameObject PlaceWallRock(GameObject prefab, Transform parent, Vector3 basePoint, Vector2 n, float bottomY, float height, float outward, Mulberry32 r, out float width)
+        {
+            var go = Instantiate(prefab, parent);
+            go.transform.rotation = Quaternion.Euler(r.Range(-4f, 4f), r.Next() * 360f, r.Range(-4f, 4f));
+            StripColliders(go);
+            FitHeight(go, height);
+            Bounds b = RenderBounds(go);
+            float depth = Mathf.Abs(n.x) * b.extents.x + Mathf.Abs(n.y) * b.extents.z;
+            width = 2f * (Mathf.Abs(n.y) * b.extents.x + Mathf.Abs(n.x) * b.extents.z);
+            Vector3 target = basePoint + new Vector3(n.x, 0, n.y) * (depth * 0.8f + outward);
+            go.transform.position += new Vector3(target.x - b.center.x, bottomY - b.min.y, target.z - b.center.z);
+            return go;
+        }
+
+        static Bounds RenderBounds(GameObject go)
+        {
+            var rs = go.GetComponentsInChildren<Renderer>();
+            if (rs.Length == 0) return new Bounds(go.transform.position, Vector3.zero);
+            Bounds b = rs[0].bounds;
+            foreach (var rd in rs) b.Encapsulate(rd.bounds);
+            return b;
+        }
+
+        /// <summary>A box collider fitted to each mesh of a model, narrowed on x and z. Mesh colliders cannot be built
+        /// at runtime in a phone build from models that are not Read/Write enabled, but box colliders always can.</summary>
+        static void AddBoxColliders(GameObject go, float narrow)
+        {
+            foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf.sharedMesh == null) continue;
+                var bc = mf.gameObject.AddComponent<BoxCollider>();
+                Bounds mb = mf.sharedMesh.bounds;
+                bc.center = mb.center;
+                bc.size = new Vector3(mb.size.x * narrow, mb.size.y, mb.size.z * narrow);
+            }
         }
 
         static void AddFacing(MeshAccumulator acc, Vector3 a, Vector3 b, Vector3 c, Color col, Vector3 desired)
@@ -600,13 +723,7 @@ namespace Redbaron
                 foreach (var hg in RedbaronMap.Hangars)
                 {
                     float Z = RedbaronMap.ForTeam(t, hg.y);
-                    Vector3 b = RedbaronMap.ToWorld(hg.x, Z);
-                    acc.AddBox(b + new Vector3(0, 1.3f, 0), new Vector3(8.6f, 2.6f, 12), new Color32(0x9a, 0x94, 0x80, 255));
-                    acc.AddBox(b + new Vector3(-2.2f, 3.7f, 0), new Vector3(5.2f, 0.3f, 12.4f), Quaternion.Euler(0, 0, 30), new Color32(0x7d, 0x7a, 0x6c, 255));
-                    acc.AddBox(b + new Vector3(2.2f, 3.7f, 0), new Vector3(5.2f, 0.3f, 12.4f), Quaternion.Euler(0, 0, -30), new Color32(0x7d, 0x7a, 0x6c, 255));
-                    float face = t == Team.Centrales ? -1 : 1; // la puerta mira hacia la pista
-                    acc.AddBox(b + new Vector3(0, 1.6f, face * 6.02f), new Vector3(7, 3.0f, 0.2f), Slit);
-                    AddFlag(acc, b + new Vector3(4.6f, 0, 3), t, 9, 1.2f);
+                    BuildingModels.AddHangar(acc, RedbaronMap.ToWorld(hg.x, Z), t);
                 }
                 float Zs = RedbaronMap.ForTeam(t, rw.yMin - 1.5f);
                 Vector3 ws = RedbaronMap.ToWorld(rw.xMin - 2, Zs);
@@ -618,11 +735,7 @@ namespace Redbaron
             }
         }
 
-        void AddFlag(MeshAccumulator acc, Vector3 basePos, Team t, float h, float size)
-        {
-            acc.AddBox(basePos + Vector3.up * (h / 2), new Vector3(0.18f, h, 0.18f), Pole);
-            acc.AddBox(basePos + new Vector3(size * 0.75f + 0.1f, h - size / 2 - 0.1f, 0), new Vector3(size * 1.5f, size, 0.08f), t.FlagColor());
-        }
+        void AddFlag(MeshAccumulator acc, Vector3 basePos, Team t, float h, float size) => BuildingModels.AddFlag(acc, basePos, t, h, size);
 
         // ------------------------------------------------------------------ Bases y casamatas
         void BuildBases()
@@ -630,7 +743,6 @@ namespace Redbaron
             var g = Group("Bases");
             foreach (Team t in new[] { Team.Centrales, Team.Entente })
             {
-                float face = t == Team.Centrales ? -1 : 1; // hacia el enemigo en z de mundo
                 // Puesto de mando
                 Vector3 p = RedbaronMap.ToWorld(RedbaronMap.CommandPost.x, RedbaronMap.ForTeam(t, RedbaronMap.CommandPost.y));
                 GameObject post;
@@ -638,21 +750,16 @@ namespace Redbaron
                 else
                 {
                     var acc = new MeshAccumulator();
-                    acc.AddBox(new Vector3(0, 1.4f, 0), new Vector3(14, 3.2f, 9), Concrete);
-                    acc.AddBox(new Vector3(0, 3.2f, 0), new Vector3(15, 0.6f, 10), Concrete2);
-                    acc.AddBox(new Vector3(-3, 5.2f, 0), new Vector3(4.5f, 3.5f, 4.5f), Concrete);
-                    acc.AddBox(new Vector3(0, 1.6f, face * 4.55f), new Vector3(10, 0.5f, 0.6f), Slit);
-                    for (int i = -3; i <= 3; i++) acc.AddBox(new Vector3(i * 2.1f, 0.4f, face * 6.4f), new Vector3(1.7f, 0.8f, 1), Sandbag);
-                    AddFlag(acc, new Vector3(3.5f, 3.4f, 0), t, 7.5f, 1.6f);
+                    BuildingModels.AddCommandPost(acc, t);
                     post = acc.ToObject("PuestoDeMando_" + t, g, vertexColorMaterial, false);
                     post.transform.position = p;
                     var bc = post.AddComponent<BoxCollider>();
-                    bc.center = new Vector3(0, 2.5f, 0); bc.size = new Vector3(15, 5, 10);
+                    bc.center = BuildingModels.CommandPostCenter; bc.size = BuildingModels.CommandPostSize;
                 }
                 var hp = GetOrAdd<Health>(post);
                 hp.team = t; hp.kind = TargetKind.CommandPost; hp.maxHp = hp.hp = 150; hp.aimHeight = 1.5f;
                 if (post.GetComponent<CommandPost>() == null) post.AddComponent<CommandPost>();
-                AddObstacle(post, new Vector3(15, 5, 10), new Vector3(0, 2.5f, 0));
+                AddObstacle(post, BuildingModels.CommandPostSize, BuildingModels.CommandPostCenter);
 
                 // Casamatas
                 foreach (var b in RedbaronMap.Bunkers)
@@ -663,20 +770,16 @@ namespace Redbaron
                     else
                     {
                         var acc = new MeshAccumulator();
-                        acc.AddBox(new Vector3(0, 0.7f, 0), new Vector3(5, 1.8f, 3.4f), Concrete);
-                        acc.AddBox(new Vector3(0, 1.75f, 0), new Vector3(5.6f, 0.45f, 4), Concrete2);
-                        acc.AddBox(new Vector3(0, 1.05f, face * 1.72f), new Vector3(3, 0.3f, 0.2f), Slit);
-                        for (int i = -2; i <= 2; i++) acc.AddBox(new Vector3(i * 1.15f, 0.3f, face * 2.6f), new Vector3(1.1f, 0.6f, 0.8f), Sandbag);
-                        AddFlag(acc, new Vector3(2.2f, 1.9f, 0), t, 3.2f, 0.8f);
+                        BuildingModels.AddBunker(acc, t);
                         bunker = acc.ToObject("Casamata_" + t, g, vertexColorMaterial, false);
                         bunker.transform.position = bp;
                         var bc = bunker.AddComponent<BoxCollider>();
-                        bc.center = new Vector3(0, 1, 0); bc.size = new Vector3(5.6f, 2.2f, 4);
+                        bc.center = BuildingModels.BunkerCenter; bc.size = BuildingModels.BunkerSize;
                     }
                     var bh = GetOrAdd<Health>(bunker);
                     bh.team = t; bh.kind = TargetKind.Bunker; bh.maxHp = bh.hp = 20; bh.aimHeight = 1.1f;
                     if (bunker.GetComponent<Bunker>() == null) bunker.AddComponent<Bunker>();
-                    AddObstacle(bunker, new Vector3(5.6f, 2.2f, 4), new Vector3(0, 1, 0));
+                    AddObstacle(bunker, BuildingModels.BunkerSize, BuildingModels.BunkerCenter);
                 }
             }
         }
@@ -904,8 +1007,11 @@ namespace Redbaron
             var markups = new List<NavMeshBuildMarkup>();
             if (waterBlockers == null) waterBlockers = Root.Find("Agua_BloqueoNavMesh");
             if (waterBlockers != null) markups.Add(new NavMeshBuildMarkup { root = waterBlockers, overrideArea = true, area = 1 });
-            var decorRoot = Root.Find("Decorado");
-            if (decorRoot != null) markups.Add(new NavMeshBuildMarkup { root = decorRoot, ignoreFromBuild = true });
+            foreach (var scenery in new[] { "Decorado", "Pared_Rocas" })
+            {
+                var sr = Root.Find(scenery);
+                if (sr != null) markups.Add(new NavMeshBuildMarkup { root = sr, ignoreFromBuild = true });
+            }
 #if UNITY_6000_6_OR_NEWER
             var units = FindObjectsByType<UnityEngine.AI.NavMeshAgent>();
 #else

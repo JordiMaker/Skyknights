@@ -113,7 +113,8 @@ namespace Redbaron
             t.fontSize = Mathf.RoundToInt(size); t.fontStyle = FontStyle.Bold; t.alignment = TextAnchor.MiddleCenter;
             t.horizontalOverflow = HorizontalWrapMode.Overflow; t.verticalOverflow = VerticalWrapMode.Overflow;
             t.color = new Color(1f, 0.98f, 0.92f); t.raycastTarget = false;
-            var o = rt.gameObject.AddComponent<UnityEngine.UI.Outline>(); // not Quick Outline's Outline o.effectColor = new Color(0, 0, 0, 0.7f); o.effectDistance = new Vector2(2, -2);
+            var o = rt.gameObject.AddComponent<UnityEngine.UI.Outline>(); // not Quick Outline's Outline
+            o.effectColor = new Color(0, 0, 0, 0.7f); o.effectDistance = new Vector2(2, -2);
         }
 
         static Sprite circle;
@@ -151,8 +152,8 @@ namespace Redbaron
         {
             Roll = Throttle = 0; Fire = BombPressed = CameraPressed = false;
             Active = show == Show.Always || (show == Show.Auto && Application.isMobilePlatform);
-            canvas.enabled = Active;
-            if (!Active) { joyFinger = int.MinValue; return; }
+            canvas.enabled = Active && !PauseMenu.IsPaused;
+            if (!Active || PauseMenu.IsPaused) { joyFinger = int.MinValue; return; }
             ApplySafeArea();
 
             var fingers = LeanTouch.GetFingers(false, false);

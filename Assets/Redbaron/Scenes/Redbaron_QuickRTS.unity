@@ -753,6 +753,7 @@ GameObject:
   - component: {fileID: 1682496124}
   - component: {fileID: 1682496129}
   - component: {fileID: 1682496130}
+  - component: {fileID: 1682496131}
   m_Layer: 0
   m_Name: Redbaron
   m_TagString: Untagged
@@ -904,6 +905,17 @@ MonoBehaviour:
   - {fileID: 5752293701769642280, guid: ad70f839d2c8b2447b9acc7c2366f4b3, type: 3}
   - {fileID: 2927360652695280573, guid: 8875fc43068e2db44927bce065f79777, type: 3}
   basePropsPerSite: 6
+  wallRockPrefabs:
+  - {fileID: 204760360782740188, guid: 44ba10797d980b44e847015bcaaffecd, type: 3}
+  - {fileID: 3656696918337930391, guid: 113edd08c2857434fac26fb3b519b32c, type: 3}
+  wallBoulderPrefabs:
+  - {fileID: 6850010492682168882, guid: f4b79a7031b5c86419d3d72d1a125974, type: 3}
+  - {fileID: 8498971446905571726, guid: d461bde81a31c7546b8ca4bd4de3b937, type: 3}
+  - {fileID: 1015316157352447657, guid: 9ada62ba54a89424590fefd04a1f15af, type: 3}
+  - {fileID: 8613049357029381422, guid: c8592ae1c51f03e4a8f78ce59a6433b9, type: 3}
+  wallRockHeight: {x: 13, y: 17}
+  wallRockOverlap: 0.55
+  wallBoulderCount: 70
   bunkerPrefab: {fileID: 0}
   commandPostPrefab: {fileID: 0}
 --- !u!4 &1682496128
@@ -958,6 +970,18 @@ MonoBehaviour:
   joystickPrefab: {fileID: 7905871478575349805, guid: a09c080eece23c242bc304ec6d588012, type: 3}
   position: {x: 290, y: 270}
   scale: 1.3
+--- !u!114 &1682496131
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1682496123}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 09cdaa8c5fc0c42a788e1118c2a8be22, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::Redbaron.PauseMenu
 --- !u!4 &1723907225 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6145208819103857560, guid: 2dcbb60d7f41248e6ac9f38b76804926, type: 3}

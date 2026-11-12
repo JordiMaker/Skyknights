@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.2 (in progress)
+
+**Menu**
+- The game starts on a main menu with missions, aircraft cards and building cards (#9).
+- Three missions, each its own data asset. For now they all play the same battle.
+- Cards with a 3D model you can turn, and each ship's or building's values.
+- Version number on the main screen and in the pause panel (#6).
+- Pause in the battle (II button or Escape), with Continue and Main menu.
+
+**Map**
+- The cliff around the map is built from complete low-poly rock models, with no more see-through gaps (#8).
+- Mountain rocks keep their collisions in the phone build (#7).
+
 ## 0.1 (2026-11-12): first version on GitHub
 
 The prototype as it stands after the first development sessions.

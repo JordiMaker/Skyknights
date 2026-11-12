@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acfaae70c6fa74393a177d827ee7b433, type: 3}
+  m_Name: Mision_03
+  m_EditorClassIdentifier: Assembly-CSharp::Redbaron.MissionDefinition
+  title: "\xDAltima luz"
+  setting: "Sector de las diez franjas \xB7 oto\xF1o de 1918"
+  briefing: "Tras meses de combate, las dos l\xEDneas est\xE1n agotadas. Un \xFAltimo empuj\xF3n puede decidir el sector: apoya el asalto final."
+  objective: Destruye el puesto de mando enemigo.
+  scenario: Frente en diez franjas
+  sceneName: Redbaron_QuickRTS

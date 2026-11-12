@@ -36,8 +36,19 @@ namespace Redbaron
             var pk = go.AddComponent<AirPickup>();
             pk.team = t;
 
+            var icon = BuildIcon(go.transform, mat, out pk.glow);
+            pk.icon = icon.transform;
+            return pk;
+        }
+
+        static readonly Color Green = new Color32(0x3f, 0xc8, 0x4c, 255);
+
+        /// <summary>The icon itself (a supply crate with green crosses inside a gold ring) and its green light.
+        /// Shared with the menu's building cards.</summary>
+        public static GameObject BuildIcon(Transform parent, Material mat, out Light glow)
+        {
             var acc = new MeshAccumulator();
-            Color wood = new Color32(0x7a, 0x56, 0x34, 255), green = new Color32(0x3f, 0xc8, 0x4c, 255), gold = new Color32(0xe0, 0xb0, 0x30, 255);
+            Color wood = new Color32(0x7a, 0x56, 0x34, 255), green = Green, gold = new Color32(0xe0, 0xb0, 0x30, 255);
             acc.AddBox(Vector3.zero, new Vector3(1.6f, 1.6f, 1.6f), wood);
             foreach (var n in new[] { Vector3.forward, Vector3.back, Vector3.left, Vector3.right, Vector3.up })
             {
@@ -53,14 +64,13 @@ namespace Redbaron
                 Vector3 p = new Vector3(Mathf.Cos(ang), 0, Mathf.Sin(ang)) * 2.4f;
                 acc.AddBox(p, new Vector3(0.22f, 0.22f, 0.95f), Quaternion.Euler(0, -ang * Mathf.Rad2Deg, 0), gold);
             }
-            var icon = acc.ToObject("Icono", go.transform, mat, false);
-            pk.icon = icon.transform;
+            var icon = acc.ToObject("Icono", parent, mat, false);
             icon.GetComponent<MeshRenderer>().shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
 
-            pk.glow = new GameObject("Brillo").AddComponent<Light>();
-            pk.glow.transform.SetParent(go.transform, false);
-            pk.glow.type = LightType.Point; pk.glow.color = green; pk.glow.range = 9f; pk.glow.intensity = 2f; pk.glow.shadows = LightShadows.None;
-            return pk;
+            glow = new GameObject("Brillo").AddComponent<Light>();
+            glow.transform.SetParent(parent, false);
+            glow.type = LightType.Point; glow.color = green; glow.range = 9f; glow.intensity = 2f; glow.shadows = LightShadows.None;
+            return icon;
         }
 
         static Vector3 Abs(Vector3 v) => new Vector3(Mathf.Abs(v.x), Mathf.Abs(v.y), Mathf.Abs(v.z));

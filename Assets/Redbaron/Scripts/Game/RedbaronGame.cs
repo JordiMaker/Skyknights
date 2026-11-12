@@ -123,7 +123,7 @@ namespace Redbaron
                 small = new GUIStyle(label) { fontSize = 11, normal = { textColor = new Color(0.71f, 0.68f, 0.59f) } };
             }
             GUILayout.BeginArea(new Rect(12, 12, 320, 250), box);
-            GUILayout.Label("REDBARON · FRENTE EN DIEZ FRANJAS", small);
+            GUILayout.Label("REDBARON · " + MissionSession.Title.ToUpperInvariant(), small);
             Bar("Mando Centrales", CommandPost.Of(Team.Centrales), Team.Centrales.FlagColor());
             Bar("Mando Entente", CommandPost.Of(Team.Entente), Team.Entente.FlagColor());
             int nc = 0, ne = 0;

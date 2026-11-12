@@ -391,3 +391,47 @@ With these values, half a push rolls at about 31°/s for fine corrections, three
 All are 3D sounds from a pool of 32 voices. Each sound has a minimum gap between plays, so a whole battalion firing at once does not saturate the mix. To use recorded sounds, assign `Sfx.PlaneGunClip`, `RifleClip`, `BunkerGunClip`, `PlaneHitClip`, `ThudClip`, `ExplosionClip` or `BigExplosionClip` from any script; `Sfx.Volume` sets the overall level.
 
 **Ammo counter:** on the right of the screen, a third of the way down. It shows your rounds left as a number and a 20-segment gauge (out of 80), and your bombs as dots (out of 4). The number turns orange at a quarter left and blinks red when empty. Fly through your airfield's refill icon to reload.
+
+## Main menu, missions and cards (added 2026-11-12)
+
+The game now starts on a main menu (`Assets/Redbaron/Scenes/Redbaron_Menu.unity`, first in the build). Its title reads **SKYKNIGHTS**.
+
+| Screen | What it shows |
+|---|---|
+| Main | MISIONES, NAVES, EDIFICIOS and SALIR (SALIR is hidden in the Editor), a hangar ship turning on the right, and the version (bottom right). |
+| Misiones | The mission list and the selected mission's place and date, briefing, objective and battle. DESPEGAR loads it. |
+| Naves | One card per hangar ship: a 3D model in its side's colours (drag to turn it), role, side, size, combat values and a description. |
+| Edificios | Command post, bunker, hangar and refill point: a 3D model, toughness, bomb damage and what each one does. |
+
+The phone's back button (Escape) returns to the main screen.
+
+**Missions** are data assets in `Assets/Redbaron/Missions` (Create > Redbaron > Mission): title, place and date, briefing, objective, battle name and scene. For now the three missions load the same battle with the same rules. When a mission needs to differ (map, sides, waves, objectives), add the field to `MissionDefinition` and read it in the battle through `MissionSession.Current`. The battle panel shows the chosen mission's title.
+
+**Cards** come from `Assets/Redbaron/Data/Redbaron_Catalogo.asset` (Create > Redbaron > Catalog), which holds each ship's model, side, role, size and description, and each building's values. All ships fly the same in the battle for now, so their cards share one set of combat values. The building cards draw the same geometry as the map, from `BuildingModels.cs`.
+
+**Pause:** in the battle, the **II** button at the top of the screen, or Escape, pauses the game. Time and sound stop, and neither keys nor touch controls fly the plane. CONTINUAR resumes; MENÚ PRINCIPAL goes back to the menu.
+
+**Rebuilding:** Redbaron > Crear menú principal writes the default catalog, the three missions and the menu scene again, adds the pause to the battle scene and sets the build's scene list. It overwrites edits made to the catalog and missions.
+
+## Rock wall (added 2026-11-12)
+
+The cliff around the map is now built from complete low-poly rock models instead of the generated strip, which showed holes where its faces turned away from the camera.
+
+- **Rocks:** two overlapping tiers of Palmov Island "stone large" columns, scaled to reach the wall's rim (about 28 m), plus extra rocks at the four corners.
+- **At the foot:** Happy Little Trees boulders.
+- **On top:** a plateau.
+- **Collisions:**
+  - The generated wall is still there as an invisible collider, so planes and the NavMesh still stop at it.
+  - The rocks have box colliders, which also work in phone builds. The mountain rocks now use box colliders too: their mesh colliders could not be built on the phone.
+
+Settings in RedbaronMapBuilder → Boundary wall:
+
+| Field | Default | Effect |
+|---|---|---|
+| Wall Rock Prefabs | stone large, stone large 2 | Rock models for the cliff. Empty = the old generated wall is drawn. |
+| Wall Boulder Prefabs | Rock_004, Rock_013, Rock_005, Rock_002 | Boulders at the foot (decoration only). |
+| Wall Rock Height | 13–17 m | Height of each lower-tier rock; the upper tier fills the rest. |
+| Wall Rock Overlap | 0.55 | Distance between rocks as a share of a rock's width (below 1 they overlap). |
+| Wall Boulder Count | 70 | |
+
+The rocks use their own random sequence, so trees, craters and trenches stay where they were.

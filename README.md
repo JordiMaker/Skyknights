@@ -4,7 +4,7 @@ A First World War battle game made in Unity. You fly a plane over the front line
 
 In the code and the Unity folders the game is still called **Redbaron**, its working title.
 
-Current version: **0.1** (prototype). See [CHANGELOG.md](CHANGELOG.md).
+Current version: **0.2** (in progress). See [CHANGELOG.md](CHANGELOG.md).
 
 ## What is in this repository
 
@@ -12,7 +12,7 @@ Only our own work:
 
 | Path | Contents |
 |---|---|
-| `Assets/Redbaron/` | The game: scripts, the playable scene, prefabs, materials, shaders and the aircraft models (`Naves/`). |
+| `Assets/Redbaron/` | The game: scripts, the menu and battle scenes, missions (`Missions/`), the card catalog (`Data/`), prefabs, materials, shaders and the aircraft models (`Naves/`). |
 | `Assets/QuickRTS-Fixes/` | A stand-in for a shader Quick RTS expects, plus its team materials. |
 | `ProjectSettings/`, `Packages/` | Unity settings and the list of Unity packages. |
 | `docs/LEEME.md` | The full game guide: rules, controls, settings and how each feature works. |
@@ -26,7 +26,7 @@ The Asset Store packages the game builds on are **not** included, because their 
 3. Unity reports compile errors because the third-party packages are missing. Choose **Ignore** (or enter Safe Mode and leave it) to reach the Editor.
 4. Import the packages listed in [THIRD_PARTY.md](THIRD_PARTY.md) from Window > Package Manager > My Assets, following its import notes. **Untick `ProjectSettings` and `Packages`** when a package offers them, or it will overwrite this project's settings.
 5. Apply the fixes listed in THIRD_PARTY.md.
-6. Open `Assets/Redbaron/Scenes/Redbaron_QuickRTS.unity` and press Play.
+6. Open `Assets/Redbaron/Scenes/Redbaron_Menu.unity` and press Play. You can also open `Redbaron_QuickRTS.unity` to go straight into the battle.
 
 ## Controls
 
@@ -38,6 +38,7 @@ The Asset Store packages the game builds on are **not** included, because their 
 | Drop a bomb | X | BOMBA |
 | Camera: Quick RTS view, behind the plane, cockpit, top view | R, C, F, V | CÁM (cycles through them) |
 | Game speed | F5, F6, F7 | none |
+| Pause, then continue or go back to the menu | Escape | II (top centre), or the back button |
 
 Details are in [docs/LEEME.md](docs/LEEME.md).
 

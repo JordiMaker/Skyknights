@@ -362,11 +362,28 @@ namespace Redbaron
             m.transform.localPosition = -b.center * k;
             BodyRadius = Mathf.Max(1.2f, 0.3f * Mathf.Max(b.size.x, b.size.z) * k);
 
-            // Side colours: parts painted with the "Equipo" / "EquipoOscuro" materials take the side's colours
-            // (Redbaron hangar ships). Models without them get a light team tint instead.
+            bool teamParts = PaintTeam(rs, team, teamTint, out Color main);
+
+            // Moving parts (Helice_*, Rotor*, Ala_I/Ala_D) get their own pivot and spin with GiroPiezas.
+            if (RepivotMovingParts(m.transform)) holder.AddComponent<GiroPiezas>();
+            else
+                foreach (var t in m.GetComponentsInChildren<Transform>(true))
+                {
+                    string n = t.name.ToLowerInvariant();
+                    foreach (var pn in PropNames) if (n.Contains(pn) && t.GetComponent<Renderer>() != null) { propeller = t; break; }
+                    if (propeller != null) break;
+                }
+            color = teamParts ? main : Color.Lerp(rs[0].sharedMaterial != null && rs[0].sharedMaterial.HasProperty("_Color") ? rs[0].sharedMaterial.color : Color.gray, team.FlagColor(), 0.5f);
+            return holder;
+        }
+
+        /// <summary>Side colours: parts painted with the "Equipo" / "EquipoOscuro" materials take the side's colours
+        /// (Redbaron hangar ships). Models without them get a light team tint instead. Returns whether the model has team parts.</summary>
+        public static bool PaintTeam(Renderer[] rs, Team team, float teamTint, out Color main)
+        {
             bool teamParts = false;
             foreach (var r in rs) foreach (var mm in r.sharedMaterials) if (mm != null && mm.name.StartsWith("Equipo")) teamParts = true;
-            Color main = team == Team.Centrales ? new Color32(0xA3, 0x27, 0x1F, 255) : new Color32(0x2F, 0x4F, 0x8A, 255);
+            main = team == Team.Centrales ? new Color32(0xA3, 0x27, 0x1F, 255) : new Color32(0x2F, 0x4F, 0x8A, 255);
             Color dark = team == Team.Centrales ? new Color32(0x7A, 0x1C, 0x16, 255) : new Color32(0x22, 0x38, 0x5F, 255);
             Color tint = Color.Lerp(Color.white, team.FlagColor(), teamTint);
             var mpb = new MaterialPropertyBlock();
@@ -384,23 +401,31 @@ namespace Redbaron
                     r.GetPropertyBlock(mpb, i); mpb.SetColor("_Color", c); r.SetPropertyBlock(mpb, i);
                 }
             }
+            return teamParts;
+        }
 
-            // Moving parts (Helice_*, Rotor*, Ala_I/Ala_D) get their own pivot and spin with GiroPiezas.
+        /// <summary>A hangar ship as a display model (for the menu's cards): painted in the side's colours,
+        /// with its propellers, rotors or wings moving. Centred on its bounds; nothing in it collides or thinks.</summary>
+        public static GameObject Showcase(GameObject prefab, Team team, Transform parent)
+        {
+            var holder = new GameObject("Vitrina_" + prefab.name);
+            holder.transform.SetParent(parent, false);
+            var m = Instantiate(prefab, holder.transform);
+            foreach (var c in m.GetComponentsInChildren<Collider>(true)) DestroyImmediate(c);
+            var rs = m.GetComponentsInChildren<Renderer>(true);
+            if (rs.Length > 0)
+            {
+                Bounds b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
+                m.transform.position -= b.center - holder.transform.position;
+            }
+            PaintTeam(rs, team, 0.35f, out _);
             if (RepivotMovingParts(m.transform)) holder.AddComponent<GiroPiezas>();
-            else
-                foreach (var t in m.GetComponentsInChildren<Transform>(true))
-                {
-                    string n = t.name.ToLowerInvariant();
-                    foreach (var pn in PropNames) if (n.Contains(pn) && t.GetComponent<Renderer>() != null) { propeller = t; break; }
-                    if (propeller != null) break;
-                }
-            color = teamParts ? main : Color.Lerp(rs[0].sharedMaterial != null && rs[0].sharedMaterial.HasProperty("_Color") ? rs[0].sharedMaterial.color : Color.gray, team.FlagColor(), 0.5f);
             return holder;
         }
 
         /// <summary>OBJ parts share the model origin, so a propeller would spin around the ground. Each moving part gets
         /// a parent at its centre (a wing at its root), named as GiroPiezas expects; the mesh becomes "<name>_Malla".</summary>
-        static bool RepivotMovingParts(Transform root)
+        public static bool RepivotMovingParts(Transform root)
         {
             bool any = false;
             var parts = new List<Transform>(root.GetComponentsInChildren<Transform>(true));
@@ -429,6 +454,7 @@ namespace Redbaron
 
         void UpdatePlayer(float dt)
         {
+            if (PauseMenu.IsPaused) return; // no flying, firing or bombing while the pause panel is open
             // Arrow keys also pan the Quick RTS camera, so in the free camera (R) only WASD fly the plane.
             var cams = RedbaronCameras.Instance;
             bool arrows = cams == null || cams.mode != RedbaronCameras.Mode.Free;
@@ -592,7 +618,7 @@ namespace Redbaron
         }
         void OnGUI()
         {
-            if (!playerControlled) return;
+            if (!playerControlled || PauseMenu.IsPaused) return; // IMGUI draws over uGUI, so hide bars and sights behind the pause panel
             float k = Mathf.Max(1f, Screen.height / 720f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(k, k, 1f));
             float w = Screen.width / k, hgt = Screen.height / k;
