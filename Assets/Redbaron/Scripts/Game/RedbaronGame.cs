@@ -19,6 +19,8 @@ namespace Redbaron
         public bool showPanel = true;
         [Tooltip("Keys for game speed x1, x2 and x4. Quick RTS uses 0-9 for control groups, so its scenes use F5/F6/F7.")]
         public KeyCode[] speedKeys = { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3 };
+        [Tooltip("G sends all your troops forward and H makes them all hold. Off in scenes with their own RTS controls (AITestBench).")]
+        public bool globalOrderKeys = true;
         static readonly float[] Speeds = { 1, 2, 4 };
 
         public bool GameOver => gameOverT > 0;
@@ -81,13 +83,13 @@ namespace Redbaron
             }
             for (int i = 0; i < speedKeys.Length && i < Speeds.Length; i++)
                 if (Input.GetKeyDown(speedKeys[i])) Time.timeScale = Speeds[i];
-            if (Input.GetKeyDown(KeyCode.G))
+            if (globalOrderKeys && Input.GetKeyDown(KeyCode.G))
             {
                 foreach (var s in SoldierAI.All) if (s.team == playerTeam && s.Alive) s.OrderAdvance();
                 if (spawner != null) spawner.playerAutoAdvance = true;
                 Log("Tus tropas avanzan por sus líneas");
             }
-            if (Input.GetKeyDown(KeyCode.H))
+            if (globalOrderKeys && Input.GetKeyDown(KeyCode.H))
             {
                 foreach (var s in SoldierAI.All) if (s.team == playerTeam && s.Alive) s.OrderHold();
                 if (spawner != null) spawner.playerAutoAdvance = false;

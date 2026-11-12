@@ -625,44 +625,62 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
 - Grenadiers and flamethrower troops close in on men in cover and on bunkers within 40 m.
 - Nobody charges with a squad that has lost a quarter of its men.
 
-## AI test scene (added 2026-11-12)
+## RTS test screen (added 2026-11-12)
 
-`Assets/Redbaron/Scenes/Redbaron_PruebaIA.unity` is a copy of the battle scene with no waves (WaveSpawner disabled), no planes (AirWar disabled) and no phone controls, plus the **Banco_IA** object (AITestBench, Scripts/Testing). Open it and press Play. It is not in the build settings, so the APK does not include it.
+`Assets/Redbaron/Scenes/Redbaron_PruebaIA.unity` is a copy of the battle scene with no planes (AirWar disabled) and no phone controls, plus the **Banco_IA** object (AITestBench, Scripts/Testing). You command one side with the mouse; the other side is the normal AI. Open it and press Play. It is not in the build settings, so the APK does not include it.
 
-**The hunter.** It is one unit of the chosen type and side, starting 38 design units from its own end on the centre lane.
-- When nothing is in sight, it heads for the nearest enemy anywhere on the map (SoldierAI.Hunt), and failing that for the nearest enemy building.
-- Whatever it meets on the way, it fights with the normal AI: it takes cover, closes in, charges, falls back and dodges.
-- When it dies, it comes back after 4 s.
+**What happens by default.**
+- Both bases send their waves (the **Oleadas** button turns them off).
+- Your units, from the waves or recruited, head for the enemy command post along their lane. They fight whatever they meet, until you give them an order.
 
-**The enemies (AITestBench → Enemies).** Each entry has a unit type, how many, where they stand, and how they behave: **Hold** (dug in), **Patrol** (between two points) or **Hunt** (after the hunter). Positions are design coordinates measured from that side's own end of the map. The defaults are:
-- three riflemen and a machine gunner in the front trench;
-- a light tank;
-- a scout mech patrolling the west side;
-- two grenadiers hunting.
+**Selecting.**
+- Left-click a unit of yours.
+- Drag a box to take every unit inside it.
+- Shift adds to the selection, or takes a unit out of it.
+- Double-click a unit to take every unit of that type in view.
+- Ctrl+1–9 stores the selection as a group, and 1–9 recalls it. Press the number again to move the camera there.
+- Clicking an enemy or a building shows it in the panel with a red ring; you cannot give it orders.
 
-The map's bunkers, flak tower, hangars and command post are there too. When every enemy is down, they all come back.
+**Orders (SoldierAI.Command…).**
+
+| Input | Order | What the units do |
+|---|---|---|
+| Right-click the ground | Move | They run there in a block, firing on the way without stopping, then hold the spot with their stance. |
+| Right-click an enemy or building | Attack | They go after it whatever their stance, close in until their weapon reaches, and stay there once it is down. |
+| A + click, or Ctrl + right-click | Advance fighting | They walk there and fight everything they meet (cover, closing in, charges), then hold the spot. |
+| M + click | Move | The same as a right-click on the ground. |
+| S | Stop | They hold where they are. |
+| H | Hold position | They stop and never move again, not even to take cover; they fire at whatever their weapon reaches. |
+| G | To the enemy command post | The default order: they head for the enemy command post and fight on the way. |
+
+**Stances (SoldierAI.Stance).**
+- **Aggressive** (default): holding a spot, the units go after enemies they see within 35 m of it, and come back when nothing is left.
+- **Defensive:** they only fire at what their weapon reaches from where they are, taking cover close by; they never chase.
+- **Hold position:** they do not move at all.
+- An attack order is obeyed whatever the stance.
+
+**Recruiting.** The buttons put any of the 11 unit types at your base, taking the three lanes in turn. Infantry comes in squads of 4 (Squad Size) and vehicles one at a time. There is no cost or limit: it is a test screen.
 
 **On screen.**
-- Lines:
-  - yellow: the NavMesh path the followed unit has worked out;
-  - red: what it is aiming at;
-  - green disc: the cover, fallback point or escape spot it is heading for.
-- Labels over every unit within 80 m give its type and what it is doing.
-- The panel gives the hunter's type, life, state, target and distance, weapon, suppression and kills. It also keeps a log of its last decisions (state changes, new targets, kills).
+- Green rings mark your selection, and a red ring the enemy or building you are looking at.
+- Yellow lines are the NavMesh paths of the selected units, and red lines show what each one is aiming at.
+- A green disc shows the cover or escape spot of a single selected unit.
+- Coloured rings mark where an order was given: green for move, orange for advance fighting, red for attack.
+- Labels give type, state and a life bar. They show for the selection by default; the button switches between selection, all and none.
+- The bottom-left panel describes the selection. With one unit selected, it shows:
+  - its state, order, stance, target and weapon;
+  - its suppression and squad;
+  - a log of its decisions.
+- The top bar gives both command posts and unit counts, the game speed (also F5/F6/F7), the waves switch, labels, lines, **Bando** (switches sides and starts a new battle) and **Ayuda** (all the controls).
 
-**Controls.**
-- Panel buttons:
-  - pick the hunter's type (all 11);
-  - switch sides;
-  - reset the enemies;
-  - set the speed (x0.5 to x4);
-  - follow the next unit;
-  - turn the labels and lines on or off.
-- Keys and mouse:
-  - Tab also follows the next unit;
-  - right mouse or Q/E turn the camera;
-  - the wheel zooms.
+**Camera.**
+- The arrows, the screen edges or dragging with the middle mouse button move it.
+- The wheel zooms and Q/E turn it.
+- Space centres it on the selection.
+- The letters are orders, so WASD does not move the camera.
 
-The camera is switched to perspective, because the Quick RTS camera is orthographic and would cut the ground off below the unit.
+**Technical notes.**
+- Quick RTS stays in the scene, because its units register with its managers. Its own selection, orders, shortcuts and camera are switched off (SelectorRTS, ShortcutsSelectable, RTSCameraController).
+- The game's G/H keys for all troops (RedbaronGame → Global Order Keys) and its 1/2/3 speed keys (moved to F5–F7) are off here.
 
 **About Low Poly Shooter Pack - Free Sample (Infima Games).** It was checked for this scene and not imported. It has no enemy AI: it is a first-person player controller with weapons, pop-up targets and explosive barrels. It needs the new Input System and Post Processing, and it ships its own ProjectSettings and Packages/manifest.json.

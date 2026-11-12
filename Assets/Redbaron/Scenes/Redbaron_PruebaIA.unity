@@ -1079,6 +1079,7 @@ MonoBehaviour:
   restartDelay: 12
   showPanel: 0
   speedKeys: 1e0100001f01000020010000i
+  globalOrderKeys: 1
   lastEvent: Las oleadas salen de las bases
 --- !u!114 &1682496127
 MonoBehaviour:
@@ -1268,39 +1269,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 764b4385145bc4175ba354167ef4a57c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::Redbaron.AITestBench
-  hunterType: Fusilero
-  hunterTeam: 1
-  hunterStart: {x: 50, y: 38}
-  respawnDelay: 4
-  enemies:
-  - type: Fusilero
-    count: 3
-    at: {x: 42, y: 137}
-    mode: 0
-    to: {x: 0, y: 0}
-  - type: Ametrallador
-    count: 1
-    at: {x: 46, y: 137}
-    mode: 0
-    to: {x: 0, y: 0}
-  - type: Tanque ligero
-    count: 1
-    at: {x: 72, y: 118}
-    mode: 0
-    to: {x: 0, y: 0}
-  - type: Mech explorador
-    count: 1
-    at: {x: 20, y: 112}
-    mode: 1
-    to: {x: 30, y: 150}
-  - type: Granadero
-    count: 2
-    at: {x: 85, y: 100}
-    mode: 2
-    to: {x: 0, y: 0}
-  followDistance: 16
-  followHeight: 10
-  labels: 1
+  playerTeam: 1
+  waves: 1
+  squadSize: 4
+  panSpeed: 45
+  pitch: 55
+  minDistance: 15
+  maxDistance: 150
+  edgePan: 10
+  labels: 0
   lines: 1
 --- !u!4 &1886622015
 Transform:

@@ -37,6 +37,11 @@ namespace Redbaron
         [Tooltip("Si está activo avanza solo por su línea hacia la base enemiga.")]
         public bool autoAdvance = true;
 
+        public enum Stance { Aggressive, Defensive, HoldPosition }
+        [Tooltip("How the player's units react to enemies. Aggressive: goes after what it sees (up to 35 m from the spot it holds) and comes back. " +
+                 "Defensive: fights only what its weapon reaches from where it is. Hold position: never moves.")]
+        public Stance stance = Stance.Aggressive;
+
         [Header("Combate (a soldier spawned without a UnitType)")]
         public float walkSpeed = 2.6f;
         public float runSpeed = 3.6f;
@@ -69,6 +74,20 @@ namespace Redbaron
         public float Length => lookSize.z;
         /// <summary>Counter for the tests: how often a soldier jumped clear of a grenade or bomb.</summary>
         public static int Evades;
+        /// <summary>The player's attack order, if any.</summary>
+        public Health ForcedTarget => forcedTarget;
+        /// <summary>The order it is carrying out, in words (Spanish, for the screen).</summary>
+        public string OrderText
+        {
+            get
+            {
+                if (forcedTarget != null) return "atacar un objetivo";
+                if (CurrentState == State.Order) return "moverse";
+                if (hasObjective) return stayAtObjective ? "avanzar atacando" : toEnemyBase ? "ir al cuartel enemigo" : "buscar al enemigo";
+                if (autoAdvance || !playerControlled) return "avanzar por su línea";
+                return "defender su posición";
+            }
+        }
         /// <summary>Where it is heading when it has nothing to fight (a hunt objective, else its lane).</summary>
         public bool Hunting => hasObjective;
         /// <summary>The spot it is running to or holding: cover, a fallback point or where it jumps clear. For test scenes.</summary>
@@ -91,12 +110,15 @@ namespace Redbaron
         Vector3 spot;
         float coverT, charge, cd, thinkT;
         Health target;
-        Vector3 lastAIDest = new Vector3(float.NaN, 0, 0);
+        static readonly Vector3 NoDest = new Vector3(float.NaN, 0, 0);
+        Vector3 lastAIDest = NoDest, lastAsked = NoDest; // where this AI sent the agent (as the navmesh placed it), and the point it asked for
+        bool ownPath, foreignPath; // a destination of this AI's, or someone else's (Quick RTS), is waiting for its path
         Vector3 orderPoint;
         bool hasOrderArea;
         float evadeT;
         bool escorting, waitForEscort, retreated;
-        Vector3 objective; bool hasObjective;
+        Vector3 objective; bool hasObjective, stayAtObjective, toEnemyBase;
+        Health forcedTarget;
         readonly HashSet<int> animParams = new HashSet<int>();
 
         void Awake()
@@ -213,12 +235,32 @@ namespace Redbaron
             if (Suppression > 0) Suppression = Mathf.Max(0f, Suppression - dt * (CurrentState == State.InCover ? 0.16f : 0.08f));
             Squad?.Think();
 
-            // Una orden de Quick RTS aparece como un destino nuevo que no ha puesto esta IA.
-            if (playerControlled && agent.hasPath && !agent.pathPending && !float.IsNaN(lastAIDest.x)
-                && (agent.destination - lastAIDest).sqrMagnitude > 2.25f)
-                OrderMove(agent.destination);
-            else if (playerControlled && float.IsNaN(lastAIDest.x) && agent.hasPath)
-                OrderMove(agent.destination);
+            // A Quick RTS order (its Mover sets the agent's destination) shows up as a path this AI did not ask for. The AI waits
+            // until the agent has worked it out, or it would stop the agent or send it elsewhere meanwhile; then the new
+            // destination becomes a move order. The AI's own destinations are read back the same way, as the navmesh placed them.
+            if (playerControlled)
+            {
+                if (agent.pathPending && !ownPath) foreignPath = true;
+                if (foreignPath)
+                {
+                    if (agent.pathPending) { UpdateAnimator(); return; }
+                    foreignPath = false;
+                    if (agent.hasPath && (float.IsNaN(lastAIDest.x) || (agent.destination - lastAIDest).sqrMagnitude > 2.25f))
+                    {
+                        lastAIDest = agent.destination;
+                        OrderMove(lastAIDest);
+                    }
+                }
+                else if (!agent.pathPending)
+                {
+                    if (ownPath) { ownPath = false; if (agent.hasPath) lastAIDest = agent.destination; }
+                    else if (agent.hasPath && (float.IsNaN(lastAIDest.x) || (agent.destination - lastAIDest).sqrMagnitude > 2.25f))
+                    {
+                        lastAIDest = agent.destination;
+                        OrderMove(lastAIDest);
+                    }
+                }
+            }
 
             thinkT -= dt;
             if (thinkT <= 0) { thinkT = 0.5f; Think(); }
@@ -229,7 +271,8 @@ namespace Redbaron
                 case State.Charge:
                 {
                     float speed = CurrentState == State.Charge || charge > 0 ? runSpeed : walkSpeed;
-                    bool escort = CurrentState == State.Advance && !IsVehicle && Squad != null && Squad.Escort != null;
+                    // An attack-move to a spot of the player's goes there, not behind the lane's vehicle.
+                    bool escort = CurrentState == State.Advance && !IsVehicle && Squad != null && Squad.Escort != null && (!hasObjective || toEnemyBase);
                     if (escort) FollowEscort();
                     else
                     {
@@ -285,14 +328,77 @@ namespace Redbaron
 
         /// <summary>Go and look for the enemy at p instead of following the lane (test scenes, AITestBench). It still fights
         /// whatever it meets on the way; with nothing in sight it walks on to p.</summary>
-        public void Hunt(Vector3 p) { objective = p; hasObjective = true; autoAdvance = true; }
+        public void Hunt(Vector3 p) { objective = p; hasObjective = true; autoAdvance = true; toEnemyBase = false; }
         public void StopHunt() { hasObjective = false; }
+
+        // ------------------------------------------------------------ Player commands (RTS controls)
+        /// <summary>Move there, firing on the way but not stopping, then hold the spot with its stance.</summary>
+        public void CommandMove(Vector3 p)
+        {
+            if (!Alive) return;
+            forcedTarget = null; hasObjective = stayAtObjective = toEnemyBase = false;
+            autoAdvance = false; // on arrival it holds there instead of going back to its lane
+            OrderMove(p);
+        }
+
+        /// <summary>Advance to p fighting whatever it meets, then hold the spot.</summary>
+        public void CommandAttackMove(Vector3 p)
+        {
+            if (!Alive) return;
+            forcedTarget = null; hasOrderArea = false;
+            ReleaseCover();
+            Hunt(p); stayAtObjective = true;
+            CurrentState = State.Advance; thinkT = 0;
+        }
+
+        /// <summary>Go after t until it is destroyed, whatever the stance, then hold where it ends up.</summary>
+        public void CommandAttack(Health t)
+        {
+            if (!Alive || t == null || !t.Alive || t.team == team) return;
+            forcedTarget = t; target = t;
+            hasObjective = stayAtObjective = false; hasOrderArea = false; autoAdvance = false;
+            ReleaseCover();
+            CurrentState = State.Assault; thinkT = 0;
+        }
+
+        /// <summary>Stop and hold here with its stance.</summary>
+        public void CommandStop()
+        {
+            forcedTarget = null; hasObjective = stayAtObjective = false;
+            OrderHold();
+        }
+
+        /// <summary>The default order: head for the enemy command post, fighting whatever it meets.</summary>
+        public void CommandAdvance()
+        {
+            if (!Alive) return;
+            forcedTarget = null; stayAtObjective = false; hasOrderArea = false;
+            ReleaseCover();
+            var post = CommandPost.Of(team.Enemy());
+            if (post != null) { Hunt(post.transform.position); toEnemyBase = true; }
+            else OrderAdvance();
+            CurrentState = State.Advance; thinkT = 0;
+        }
+
+        /// <summary>Hold position also stops the unit where it is.</summary>
+        public void SetStance(Stance s)
+        {
+            stance = s;
+            if (s == Stance.HoldPosition) CommandStop();
+            thinkT = 0;
+        }
 
         void FollowLane(float speed)
         {
             if (hasObjective)
             {
-                if (Flat(objective - transform.position) < 3f) { hasObjective = false; Stop(); return; }
+                if (Flat(objective - transform.position) < 3f)
+                {
+                    hasObjective = false;
+                    if (stayAtObjective) { stayAtObjective = false; OrderHold(); } // an attack-move ends holding the spot
+                    else Stop();
+                    return;
+                }
                 SetDest(objective, speed);
                 return;
             }
@@ -311,17 +417,17 @@ namespace Redbaron
             agent.speed = speed;
             agent.isStopped = false;
             agent.updateRotation = true;
-            if (!float.IsNaN(lastAIDest.x) && (p - lastAIDest).sqrMagnitude < 0.25f && agent.hasPath) return;
+            if (!float.IsNaN(lastAsked.x) && (p - lastAsked).sqrMagnitude < 0.25f && agent.hasPath) return;
+            lastAsked = p;
             if (NavMesh.SamplePosition(p, out var hit, 3f, NavMesh.AllAreas)) p = hit.position;
-            agent.SetDestination(p);
-            lastAIDest = p;
+            if (agent.SetDestination(p)) ownPath = true; // read back in Update when the path is ready
         }
 
         void Stop()
         {
             if (agent.isOnNavMesh) { agent.isStopped = true; agent.ResetPath(); }
             agent.updateRotation = false;
-            lastAIDest = transform.position;
+            lastAIDest = transform.position; lastAsked = NoDest; ownPath = false;
         }
 
         void FaceTowards(Vector3 p)
@@ -450,17 +556,28 @@ namespace Redbaron
         void Think()
         {
             if (CurrentState == State.Evade) return;
-            Health tgt = PickTarget(out float dist);
+            if (forcedTarget != null && !forcedTarget.Alive) { forcedTarget = null; if (playerControlled) OrderHold(); } // target down: hold there
+            float dist = 0;
+            Health tgt = forcedTarget;
+            if (tgt != null) dist = tgt.DistanceFrom(transform.position);
+            else tgt = PickTarget(out dist);
             target = tgt;
             if (IsVehicle) waitForEscort = EscortLagging();
             if (charge > 0 && Suppression > 0.7f) charge = 0; // a charge breaks down under heavy fire
             if (charge > 0) return;
             if (CurrentState == State.Order) return; // primero llegar adonde mandó el jugador
 
-            bool followsLane = autoAdvance || !playerControlled;
+            // Hold position: never moves, and fires at whatever its weapon reaches (Update fires from Hold).
+            if (playerControlled && stance == Stance.HoldPosition && forcedTarget == null)
+            {
+                if (CurrentState != State.InCover && CurrentState != State.Hold) { CurrentState = State.Hold; Stop(); }
+                return;
+            }
+            bool followsLane = autoAdvance || !playerControlled || forcedTarget != null;
+            bool aggressiveHold = playerControlled && !followsLane && stance == Stance.Aggressive;
 
             // The squad falls back: run to cover behind, then stay there and fire while it regroups.
-            if (followsLane && Squad != null && Squad.CurrentOrder != Squad.Order.Advance)
+            if (followsLane && forcedTarget == null && Squad != null && Squad.CurrentOrder != Squad.Order.Advance)
             {
                 if (!retreated)
                 {
@@ -475,6 +592,7 @@ namespace Redbaron
             if (tgt == null)
             {
                 if (followsLane) { ReleaseCover(); CurrentState = State.Advance; }
+                else if (aggressiveHold && hasOrderArea && Flat(orderPoint - transform.position) > 4f) OrderMove(orderPoint); // back to its spot
                 else if (CurrentState != State.InCover) CurrentState = State.Hold;
                 return;
             }
@@ -482,12 +600,16 @@ namespace Redbaron
             // Under heavy fire a soldier closes in from cover to cover instead.
             if (dist > Reach(tgt, dist))
             {
-                if (!IsVehicle && Suppression > 0.7f)
+                if (!IsVehicle && Suppression > 0.7f && forcedTarget == null)
                 {
                     if (CurrentState != State.InCover && !PickCover(tgt.transform.position, false, transform.position, coverSearchRadius)) { ReleaseCover(); CurrentState = State.Hold; }
                     return;
                 }
-                if (followsLane) { if (CurrentState != State.Assault) { ReleaseCover(); CurrentState = State.Assault; } }
+                // Who closes in: an attack order always; units on the move unless Defensive; an aggressive unit holding a spot
+                // if the enemy is within 35 m of that spot.
+                bool defensive = playerControlled && stance == Stance.Defensive && forcedTarget == null;
+                bool chase = forcedTarget != null || (!defensive && (followsLane || (aggressiveHold && Flat(tgt.transform.position - orderPoint) < 35f)));
+                if (chase) { if (CurrentState != State.Assault) { ReleaseCover(); CurrentState = State.Assault; } }
                 else if (CurrentState != State.InCover) CurrentState = State.Hold;
                 return;
             }
@@ -767,7 +889,7 @@ namespace Redbaron
             {
                 if (sq.Escort != this) continue;
                 float nearest = float.MaxValue;
-                foreach (var m in sq.members) if (m != null && m.Alive) nearest = Mathf.Min(nearest, Flat(m.transform.position - transform.position));
+                foreach (var m in sq.members) if (m != null && m.Alive && m.escorting && m.autoAdvance) nearest = Mathf.Min(nearest, Flat(m.transform.position - transform.position));
                 if (nearest < float.MaxValue && nearest > 16f) return true;
             }
             return false;

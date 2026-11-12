@@ -58,13 +58,25 @@
   - nobody charges with a squad that has lost a quarter of its men.
 - Your squads holding a position for you never fall back on their own.
 
-**AI test scene**
-- `Redbaron_PruebaIA.unity` shows one hunter on the battle map with no waves and no planes. It crosses the map looking for enemies: soldiers dug in, a tank, a patrolling mech and grenadiers that come after it.
-- On screen:
-  - its path, its target and the cover it runs to are drawn;
-  - every unit has a label saying what it is doing;
-  - a panel shows the hunter's state, target, weapon and suppression, with a log of its decisions.
-- Buttons pick any of the 11 unit types as the hunter, switch sides, reset the enemies and set the speed. The camera follows the hunter; Tab follows another unit.
+**RTS test screen**
+- `Redbaron_PruebaIA.unity` is the battle map with no planes, where you command one side with the mouse.
+- Selecting:
+  - click a unit, or drag a box;
+  - Shift adds to the selection;
+  - double-click takes every unit of that type in view;
+  - Ctrl+1–9 stores a group, and 1–9 recalls it.
+- Orders:
+  - right-click the ground to move, or an enemy or building to attack it;
+  - A + click advances fighting everything on the way;
+  - S stops and H holds the position;
+  - G heads for the enemy command post. That is also what every unit does by default.
+- Stances:
+  - aggressive: goes after what it sees and returns to its spot;
+  - defensive: fights only what its weapon reaches;
+  - hold position: never moves.
+- The command panel has the orders, the stances, and buttons to recruit any of the 11 unit types at your base. The waves can be turned off, and you can switch sides.
+- The selected units' paths and targets are drawn. With one unit selected, the panel shows what it is thinking and a log of its decisions.
+- Camera: arrows, screen edges or middle mouse to move it; the wheel zooms; Q/E turn it; Space centres it on the selection.
 - It is for the Editor only and is not in the phone build.
 
 **Destructible structures**
@@ -75,6 +87,8 @@
 
 **Fixes**
 - Smoke and fire effects no longer throw an error every frame after the scripts are recompiled in Play mode. That error filled the Editor log and left the effect stuck on screen.
+- Right-click move orders in the battle are no longer lost. Before, a unit that was standing or advancing when the order came often carried on with what it was doing.
+- Units no longer mistake one of their own moves for a player's order. Before, some walked to the end of their lane or to a cover spot as if ordered, without taking cover on the way.
 
 **Combat**
 - A collision no longer destroys a plane outright. This covers tree crowns, mountains, buildings, the rock wall and other planes. Each collision costs 2 of the 6 energy points and pushes the plane clear. For the next 1.5 s, further collisions do no damage. In a mid-air collision, both planes are pushed apart.
