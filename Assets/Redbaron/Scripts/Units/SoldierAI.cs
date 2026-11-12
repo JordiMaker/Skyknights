@@ -131,6 +131,10 @@ namespace Redbaron
         float evadeT;
         bool escorting, waitForEscort, retreated;
         Vector3 objective; bool hasObjective, stayAtObjective, toEnemyBase;
+        // The lane's flag (LaneFlags): this unit's own spot on the stretch, and whether it was following a flag.
+        float spreadU, spreadV; Vector3 flagPos, flagSpot; bool hadFlag;
+        /// <summary>Cover is looked for this far around a unit's spot on its lane's flag stretch (m).</summary>
+        const float FlagCoverRadius = 18f;
         Health forcedTarget;
         readonly HashSet<int> animParams = new HashSet<int>();
 
@@ -171,6 +175,7 @@ namespace Redbaron
             flak = Type.weapon == WeaponKind.Flak ? new FlakGun(t, $"{Type.name} de {t.Name()}") { burstRadius = Mathf.Max(3f, Type.splash + 3f) } : null;
             path = RedbaronMap.LanePath(t, laneIndex);
             laneOffset = Random.Range(-1.6f, 1.6f);
+            spreadU = Random.Range(-1f, 1f); spreadV = Random.Range(-1f, 1f);
             wi = 1;
             CurrentState = State.Advance;
         }
@@ -287,7 +292,7 @@ namespace Redbaron
                 {
                     float speed = CurrentState == State.Charge || charge > 0 ? runSpeed : walkSpeed;
                     // An attack-move to a spot of the player's goes there, not behind the lane's vehicle.
-                    bool escort = CurrentState == State.Advance && !IsVehicle && Squad != null && Squad.Escort != null && (!hasObjective || toEnemyBase);
+                    bool escort = CurrentState == State.Advance && !IsVehicle && Squad != null && Squad.Escort != null && (!hasObjective || toEnemyBase) && !FlagSpot(out _);
                     if (escort) FollowEscort();
                     else
                     {
@@ -420,12 +425,42 @@ namespace Redbaron
             }
             if (path == null) return;
             if (!autoAdvance && playerControlled) { CurrentState = State.Hold; Stop(); return; }
+            // The lane's flag away from the enemy post: go to this unit's spot on the stretch and stay (Think holds it there).
+            if (FlagSpot(out Vector3 fs))
+            {
+                hadFlag = true;
+                if (AtFlagSpot(fs)) { Stop(); return; }
+                SetDest(fs, speed);
+                return;
+            }
+            if (hadFlag) { hadFlag = false; wi = ClosestWaypoint(); } // the flag went back: on with the lane from here
             Vector3 a = path[Mathf.Max(0, wi - 1)], b = path[Mathf.Min(wi, path.Count - 1)];
             Vector3 dir = b - a; dir.y = 0;
             Vector3 side = dir.sqrMagnitude > 0.01f ? new Vector3(-dir.z, 0, dir.x).normalized : Vector3.zero;
             Vector3 goal = b + side * laneOffset;
             if (Flat(goal - transform.position) < 2.5f && wi < path.Count - 1) { wi++; return; }
             SetDest(goal, speed);
+        }
+
+        /// <summary>This unit's spot on its lane's flag stretch, when the flag is an intermediate objective (LaneFlags).</summary>
+        bool FlagSpot(out Vector3 spot)
+        {
+            spot = Vector3.zero;
+            if (!LaneFlags.TryObjective(team, lane, out Vector3 f)) return false;
+            if ((f - flagPos).sqrMagnitude > 0.01f || flagSpot == Vector3.zero)
+            {
+                flagPos = f;
+                flagSpot = LaneFlags.Instance.SpreadPoint(lane, spreadU, spreadV, IsVehicle);
+            }
+            spot = flagSpot;
+            return true;
+        }
+
+        /// <summary>At its flag spot: on it, or in cover anywhere on the stretch around it (so it does not walk back out of cover).</summary>
+        bool AtFlagSpot(Vector3 fs)
+        {
+            float d = Flat(fs - transform.position);
+            return d < 4f || (cover != null && d < FlagCoverRadius + 4f);
         }
 
         void SetDest(Vector3 p, float speed)
@@ -662,6 +697,11 @@ namespace Redbaron
             }
             bool followsLane = autoAdvance || !playerControlled || forcedTarget != null;
             bool aggressiveHold = playerControlled && !followsLane && stance == Stance.Aggressive;
+            // At its spot on the lane's flag stretch: holds it like an aggressive player's unit, with the cover of the whole stretch.
+            Vector3 fspot = Vector3.zero;
+            bool atFlag = followsLane && forcedTarget == null && !hasObjective && FlagSpot(out fspot) && AtFlagSpot(fspot);
+            if (atFlag) { followsLane = false; aggressiveHold = true; orderPoint = fspot; hasOrderArea = true; }
+            float holdRadius = atFlag ? FlagCoverRadius : orderCoverRadius;
 
             // The squad falls back: run to cover behind, then stay there and fire while it regroups.
             if (followsLane && forcedTarget == null && Squad != null && Squad.CurrentOrder != Squad.Order.Advance)
@@ -679,7 +719,13 @@ namespace Redbaron
             if (tgt == null)
             {
                 if (followsLane) { ReleaseCover(); CurrentState = State.Advance; }
-                else if (aggressiveHold && hasOrderArea && Flat(orderPoint - transform.position) > 4f) OrderMove(orderPoint); // back to its spot
+                else if (aggressiveHold && hasOrderArea && cover == null && Flat(orderPoint - transform.position) > 4f) OrderMove(orderPoint); // back to its spot
+                else if (atFlag && !IsVehicle && CurrentState != State.InCover && CurrentState != State.ToCover)
+                {
+                    // Nothing in sight: take a tactical spot of the stretch facing the enemy base (a rock, a trench, high ground).
+                    var post = CommandPost.Of(team.Enemy());
+                    if (post == null || !PickCover(post.transform.position, false, orderPoint, FlagCoverRadius)) { CurrentState = State.Hold; Stop(); }
+                }
                 else if (CurrentState != State.InCover) CurrentState = State.Hold;
                 return;
             }
@@ -725,7 +771,7 @@ namespace Redbaron
             bool keep = cover != null && Flat(cover.transform.position - transform.position) < 18 && cover.ProtectionAgainst(spot, ep) < 0.7f;
             if (keep) return;
             Vector3 center = hasOrderArea && !followsLane ? orderPoint : transform.position;
-            float radius = hasOrderArea && !followsLane ? orderCoverRadius : coverSearchRadius;
+            float radius = hasOrderArea && !followsLane ? holdRadius : coverSearchRadius;
             if (!PickCover(ep, false, center, radius))
             {
                 ReleaseCover();
@@ -748,7 +794,9 @@ namespace Redbaron
                 if (RedbaronMap.Sample(sd.x, sd.y).wet) continue;
                 float dS = Flat(enemyPos - s);
                 if (forward && (dS > dMe - 5 || Flat(s - transform.position) > 22)) continue;
-                float sc = Flat(s - transform.position) + Mathf.Max(0, dS - dMe) * 1.5f + (c.type == CoverType.Trinchera ? -2 : 0);
+                // Nearer is better; so is a trench, and high ground over the enemy (up to 3 m count).
+                float sc = Flat(s - transform.position) + Mathf.Max(0, dS - dMe) * 1.5f + (c.type == CoverType.Trinchera ? -2 : 0)
+                         - Mathf.Clamp(s.y - enemyPos.y, -3f, 3f);
                 if (sc < bs) { bs = sc; best = c; bestSpot = s; }
             }
             if (best == null) return false;

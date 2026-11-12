@@ -37,6 +37,7 @@ namespace Redbaron
         {
             Instance = this;
             if (spawner == null) spawner = FindAnyObjectByType<WaveSpawner>();
+            LaneFlags.Ensure(spawner != null ? spawner.playerTeam : playerTeam); // the player's lane orders, one flag per lane
         }
 
         public static void Log(string msg)
@@ -109,6 +110,7 @@ namespace Redbaron
             foreach (var p in CommandPost.All) p.ResetPost();
             if (spawner != null) spawner.ResetWaves();
             if (TroopBar.Instance != null) TroopBar.Instance.ResetAll();
+            if (LaneFlags.Instance != null) LaneFlags.Instance.ResetAll();
             Log("Nueva batalla: las oleadas salen de las bases");
         }
 

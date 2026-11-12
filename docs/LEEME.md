@@ -695,6 +695,18 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
 
 **About Low Poly Shooter Pack - Free Sample (Infima Games).** It was checked for this scene and not imported. It has no enemy AI: it is a first-person player controller with weapons, pop-up targets and explosive barrels. It needs the new Input System and Post Processing, and it ships its own ProjectSettings and Packages/manifest.json.
 
+## Lane orders: the flags (added 2026-11-13)
+
+`Scripts/Game/LaneFlags.cs` holds the player's orders, one per lane, as three big flags in the side's colour with the lane's number on the cloth. RedbaronGame creates the object (**Banderas**) in every scene; WaveSpawner's Player Team says whose lanes they are.
+
+**The two orders.**
+- **Flag at the enemy command post** (where all three start, and where "Banderas al cuartel" or a new battle puts them back): the default. The lane's troops advance along it and destroy the enemy position, as before.
+- **Flag anywhere else:** an intermediate objective. The lane's troops go to the flag, fighting whatever comes within reach on the way. Each unit has its own spot on the stretch (`SpreadPoint`: a fixed random place within Spread Side = ±14 m across the lane and Spread Along = ±16 m along it, half as wide for vehicles), so a squad spreads out instead of piling on the flag. Once there a unit holds like an aggressive player's unit: it fires at what its weapon reaches, chases only what comes within 35 m of its spot and comes back, and looks for a tactical spot within 18 m (`FlagCoverRadius`): a rock, a trench or high ground. With nothing in sight it already takes cover facing the enemy base.
+- Cover scoring (SoldierAI.PickCover) now counts height: a spot up to 3 m above the enemy is worth that many metres of distance.
+- Move the flag and the lane moves with it on its next decision (half a second); back at the post, each unit picks up its lane at the nearest waypoint. Infantry does not escort a vehicle while a flag is set: everyone goes to their own spot.
+
+**Moving a flag.** In the RTS test screen, a left click on the ground with nothing selected moves the flag of the nearest lane (by distance to the lane's path) to that point; the top bar's **Banderas al cuartel** returns all three. From code: `LaneFlags.Instance.Set(lane, worldPoint)`, `ResetAll()`, `NearestLane(point)`, `TryObjective(team, lane, out p)`. Switching sides in the test screen rebuilds the flags for the new side.
+
 ## Multiplayer FPS demo (added 2026-11-12)
 
 `Assets/Redbaron/Scenes/Redbaron_Multijugador.unity` runs the Alteruna **Multiplayer FPS Template** (Asset Store, by Alteruna AB) on the Redbaron map: the battle scene with the planes, the waves and the Quick RTS managers switched off, plus the template's player, cameras, UI, score board and effects, the SDK's room menu and eight spawn points (**PuntosAparicion**, four on each half of the map). It is an Editor demo (mouse and keyboard) and is not in the build settings.

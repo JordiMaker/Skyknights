@@ -247,9 +247,21 @@ namespace Redbaron
             return found;
         }
 
+        /// <summary>A click on the ground with nothing selected moves the flag of the lane under the cursor (LaneFlags).</summary>
+        void MoveFlag(Vector3 ground)
+        {
+            var flags = LaneFlags.Instance;
+            if (flags == null) return;
+            int lane = flags.NearestLane(ground);
+            flags.Set(lane, ground);
+            AddMark(flags.Position(lane), flags.team.FlagColor());
+            Say(flags.AtPost(lane) ? $"Bandera del carril {lane + 1} en el cuartel enemigo: avanzar y destruirlo" : $"Bandera del carril {lane + 1}: ocupar ese tramo");
+        }
+
         void Click(Vector2 screen, bool add)
         {
-            if (!Pick(screen, out var unit, out var building, out _)) { if (!add) selected.Clear(); return; }
+            if (!Pick(screen, out var unit, out var building, out var ground)) { if (!add) selected.Clear(); return; }
+            if (unit == null && building == null && selected.Count == 0 && !add) { MoveFlag(ground); return; }
             if (unit != null && unit.team == playerTeam)
             {
                 bool doubleClick = unit == lastClicked && Time.unscaledTime - lastClickT < 0.35f;
@@ -568,6 +580,7 @@ namespace Redbaron
             if (GUILayout.Button("Etiquetas: " + (labels == LabelMode.Selection ? "selección" : labels == LabelMode.All ? "todas" : "no"), button, GUILayout.Width(120)))
                 labels = (LabelMode)(((int)labels + 1) % 3);
             if (GUILayout.Button(lines ? "Líneas: sí" : "Líneas: no", button, GUILayout.Width(76))) lines = !lines;
+            if (GUILayout.Button("Banderas al cuartel", button, GUILayout.Width(120)) && LaneFlags.Instance != null) { LaneFlags.Instance.ResetAll(); Say("Las tres banderas vuelven al cuartel enemigo: avanzar"); }
             if (GUILayout.Button("Bando", button, GUILayout.Width(56))) SwitchSide();
             if (GUILayout.Button(help ? "Ayuda ▲" : "Ayuda", button, GUILayout.Width(62))) help = !help;
             GUILayout.EndHorizontal();
@@ -577,6 +590,7 @@ namespace Redbaron
         void SwitchSide()
         {
             playerTeam = playerTeam.Enemy();
+            if (LaneFlags.Instance != null) LaneFlags.Instance.SetTeam(playerTeam);
             selected.Clear(); inspected = null;
             if (spawner != null) spawner.playerTeam = playerTeam;
             if (game != null) game.ResetBattle(); // a fresh battle on the other side
@@ -609,6 +623,7 @@ namespace Redbaron
                 GUILayout.Label("Nada seleccionado", label);
                 GUILayout.Label("Clic: seleccionar · arrastrar: recuadro · doble clic: todos los de ese tipo", small);
                 GUILayout.Label("Clic derecho: mover o atacar · A + clic: avanzar atacando", small);
+                GUILayout.Label("Clic en el suelo sin selección: mover la bandera de ese carril (su orden)", small);
             }
             GUILayout.FlexibleSpace();
             GUILayout.Label(status, small);
@@ -680,6 +695,7 @@ namespace Redbaron
                 "Ctrl + 1–9: guardar grupo · 1–9: seleccionarlo (dos veces: ir a él)",
                 "Clic derecho en el suelo: mover · en un enemigo o edificio: atacarlo · Ctrl + clic derecho: avanzar atacando",
                 "A + clic: avanzar atacando · M + clic: mover · S: detenerse · H: mantener la posición · G: al cuartel enemigo",
+                "Banderas: clic en el suelo sin nada seleccionado mueve la bandera del carril más cercano; en el cuartel enemigo = avanzar y destruirlo, en otro sitio = ocupar ese tramo",
                 "Actitudes: agresiva (persigue a lo que ve y vuelve), defensiva (solo lo que alcanza su arma), mantener (no se mueve)",
                 "Cámara: flechas o bordes de la pantalla · botón central: arrastrar · rueda: zoom · Q/E: girar · Espacio: ir a la selección",
                 "Velocidad: botones de arriba o F5/F6/F7 · Escape: pausa",

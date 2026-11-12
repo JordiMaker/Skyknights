@@ -62,6 +62,12 @@
   - nobody charges with a squad that has lost a quarter of its men.
 - Your squads holding a position for you never fall back on their own.
 
+**Lane orders: the flags**
+- Each of your three lanes carries an order, shown as a big flag in your colour with the lane's number on it. All three start at the enemy command post: the default order, advance and destroy the enemy position.
+- Click the ground with nothing selected (RTS test screen) and the flag of the lane under the cursor moves there. A flag away from the post is an intermediate objective: the lane's troops go there, fighting whatever comes within reach on the way, then spread out over the stretch around it (±14 m across, ±16 m along) and take its tactical spots, each at its own place.
+- Holding the stretch, they fire at what their weapons reach, chase only what comes within 35 m of their spot and come back, and between shots look for a better position within 18 m: behind a rock, in a trench, or on high ground (cover now scores height over the enemy, up to 3 m).
+- Move the flag back to the post ("Banderas al cuartel" button, or click there) and the lane advances again from where it is. A new battle puts the flags back.
+
 **RTS test screen**
 - `Redbaron_PruebaIA.unity` is the battle map with no planes, where you command one side with the mouse.
 - Selecting:
