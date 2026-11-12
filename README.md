@@ -12,7 +12,7 @@ Only our own work:
 
 | Path | Contents |
 |---|---|
-| `Assets/Redbaron/` | The game: scripts, the menu and battle scenes, missions (`Missions/`), the card catalog (`Data/`), prefabs, materials, shaders, the aircraft models (`Naves/`) and the anti-aircraft tower model (`Edificios/`). The ships and the tower come from the Redbaron colour kit, whose `PaletaColor` script (`Scripts/Color/`) paints them in each side's colours. |
+| `Assets/Redbaron/` | The game: scripts, the menu and battle scenes, missions (`Missions/`), the card catalog (`Data/`), prefabs, materials, shaders, the aircraft models (`Naves/`), the anti-aircraft tower model (`Edificios/`) and the soldier, tank and mech models (`Soldados/`, `Tanques/`, `Mechs/`). All of them come from the Redbaron colour kit, whose `PaletaColor` script (`Scripts/Color/`) paints them in each side's colours. |
 | `Assets/QuickRTS-Fixes/` | A stand-in for a shader Quick RTS expects, plus its team materials. |
 | `ProjectSettings/`, `Packages/` | Unity settings and the list of Unity packages. |
 | `docs/LEEME.md` | The full game guide: rules, controls, settings and how each feature works. |

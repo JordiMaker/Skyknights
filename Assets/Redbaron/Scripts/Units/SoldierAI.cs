@@ -11,11 +11,15 @@ namespace Redbaron
     /// Para los soldados del jugador (Entente) obedece las órdenes de Quick RTS:
     /// cualquier destino que Quick RTS ponga en el NavMeshAgent se trata como orden; al llegar,
     /// el soldado se queda en esa zona, se cubre y dispara. También se puede llamar a OrderMove().
+    ///
+    /// The same AI drives every unit type (UnitType): riflemen, machine gunners, grenadiers, flamethrowers, sappers,
+    /// tanks and mechs. Each fires its own weapon. Short-range units close in until their weapon reaches, sappers go for
+    /// buildings and vehicles first, and vehicles never take cover.
     /// </summary>
     [RequireComponent(typeof(NavMeshAgent))]
     public class SoldierAI : MonoBehaviour
     {
-        public enum State { Advance, ToCover, InCover, Hold, Charge, Order, Dead }
+        public enum State { Advance, ToCover, InCover, Hold, Charge, Order, Dead, Assault }
         public static readonly List<SoldierAI> All = new List<SoldierAI>();
 
         [Header("Bando")]
@@ -26,7 +30,7 @@ namespace Redbaron
         [Tooltip("Si está activo avanza solo por su línea hacia la base enemiga.")]
         public bool autoAdvance = true;
 
-        [Header("Combate")]
+        [Header("Combate (a soldier spawned without a UnitType)")]
         public float walkSpeed = 2.6f;
         public float runSpeed = 3.6f;
         public float rifleRange = 50f;
@@ -46,9 +50,20 @@ namespace Redbaron
         public State CurrentState { get; private set; } = State.Advance;
         public bool Alive => Health != null && Health.Alive;
         public Health Health { get; private set; }
+        /// <summary>What this unit is and what it fires (set by Init).</summary>
+        public UnitType Type { get; private set; }
+        public bool IsVehicle => Type != null && Type.IsVehicle;
+        /// <summary>Where others aim at this unit.</summary>
+        public Vector3 HitPoint => IsVehicle ? transform.position + Vector3.up * lookSize.y * 0.5f : transform.position + Vector3.up * (EyeHeight() - 0.2f);
+
+        /// <summary>How far every unit sees an enemy (m).</summary>
+        const float Sight = 50f;
+        const float BuildingSight = 42f, CommandPostSight = 40f;
 
         NavMeshAgent agent;
         Animator anim;
+        UnitAim aim;
+        Vector3 lookSize = new Vector3(0.7f, 1.8f, 0.5f);
         List<Vector3> path;
         int wi = 1;
         float laneOffset;
@@ -84,15 +99,41 @@ namespace Redbaron
         void OnEnable() { All.Add(this); }
         void OnDisable() { All.Remove(this); ReleaseCover(); }
 
-        /// <summary>Lo llama WaveSpawner al crear el soldado.</summary>
-        public void Init(Team t, int laneIndex, bool player, bool advance)
+        /// <summary>Lo llama WaveSpawner al crear el soldado. type = what it is (null: a rifleman with this component's values).</summary>
+        public void Init(Team t, int laneIndex, bool player, bool advance, UnitType type = null)
         {
+            Type = type ?? new UnitType { name = "Fusilero", range = rifleRange, cooldown = rifleCooldown, hit = baseHit, walkSpeed = walkSpeed, runSpeed = runSpeed };
             team = t; lane = laneIndex; playerControlled = player; autoAdvance = advance;
             Health.team = t;
+            Health.kind = Type.IsVehicle ? TargetKind.Vehicle : TargetKind.Soldier;
+            Health.maxHp = Health.hp = Type.hp;
+            walkSpeed = Type.walkSpeed; runSpeed = Type.runSpeed;
+            agent.speed = walkSpeed;
+            if (Type.IsVehicle) { agent.angularSpeed = 110; agent.acceleration = 5; }
             path = RedbaronMap.LanePath(t, laneIndex);
             laneOffset = Random.Range(-1.6f, 1.6f);
             wi = 1;
             CurrentState = State.Advance;
+        }
+
+        /// <summary>The kit model is on (WaveSpawner): a vehicle takes its size for the collider, the agent and where it is hit.</summary>
+        public void SetLook(UnitModels.Look look)
+        {
+            if (look == null) return;
+            aim = look.aim;
+            lookSize = look.size;
+            if (!IsVehicle) return;
+            Health.aimHeight = lookSize.y * 0.5f;
+            agent.radius = Mathf.Clamp(Mathf.Max(lookSize.x, lookSize.z) * 0.35f, 0.5f, 1.8f);
+            agent.height = lookSize.y;
+            var cc = GetComponent<CapsuleCollider>();
+            if (cc == null) return;
+            float sc = Mathf.Max(1e-4f, transform.lossyScale.y);
+            bool lying = lookSize.z > lookSize.y; // a tank: the capsule lies along the hull
+            cc.direction = lying ? 2 : 1;
+            cc.radius = (lying ? Mathf.Min(lookSize.x, lookSize.y) : Mathf.Max(lookSize.x, lookSize.z)) * 0.5f / sc;
+            cc.height = (lying ? lookSize.z : lookSize.y) / sc;
+            cc.center = new Vector3(look.center.x, lookSize.y * 0.5f, look.center.z) / sc;
         }
 
         // ------------------------------------------------------------ Órdenes del jugador
@@ -140,6 +181,7 @@ namespace Redbaron
         void Update()
         {
             if (!Alive) return;
+            if (Type == null) Init(team, lane, playerControlled, autoAdvance);
             var game = RedbaronGame.Instance;
             if (game != null && game.GameOver) { Stop(); UpdateAnimator(); return; }
             float dt = Time.deltaTime;
@@ -169,13 +211,23 @@ namespace Redbaron
                 case State.Order:
                     if (!agent.pathPending && agent.remainingDistance < 0.8f) { CurrentState = State.Hold; Stop(); }
                     break;
+                case State.Assault:
+                {
+                    if (target == null || !target.Alive) { CurrentState = State.Advance; break; }
+                    float td = target.DistanceFrom(transform.position);
+                    if (td <= Reach(target, td) * 0.85f) { CurrentState = State.Hold; Stop(); }
+                    else SetDest(ApproachPoint(target), IsVehicle ? walkSpeed : runSpeed);
+                    break;
+                }
                 case State.InCover:
                 case State.Hold:
                     Stop();
                     break;
             }
 
-            if (target != null && target.Alive && (CurrentState == State.InCover || CurrentState == State.Hold || CurrentState == State.Charge || charge > 0 || CurrentState == State.Order))
+            bool engaged = target != null && target.Alive;
+            if (aim != null) aim.Target = engaged ? AimPointOf(target) : (Vector3?)null;
+            if (engaged && (CurrentState == State.InCover || CurrentState == State.Hold || CurrentState == State.Charge || charge > 0 || CurrentState == State.Order))
             {
                 if (CurrentState == State.InCover || CurrentState == State.Hold) FaceTowards(target.transform.position);
                 cd -= dt;
@@ -185,6 +237,7 @@ namespace Redbaron
         }
 
         static float Flat(Vector3 v) { v.y = 0; return v.magnitude; }
+        static Vector3 FlatDir(Vector3 v) { v.y = 0; return v; }
 
         void FollowLane(float speed)
         {
@@ -220,20 +273,92 @@ namespace Redbaron
         {
             Vector3 d = p - transform.position; d.y = 0;
             if (d.sqrMagnitude < 0.01f) return;
-            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(d), Time.deltaTime * 8f);
+            float turn = IsVehicle ? 1.5f : 8f; // a hull turns slowly
+            transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.LookRotation(d), Time.deltaTime * turn);
         }
 
         // ------------------------------------------------------------ Decisión
-        SoldierAI NearestEnemy(float range, out float dist)
+        /// <summary>The target to fight. A sapper goes for the nearest building or vehicle first. Otherwise the nearest enemy unit,
+        /// where a weapon that barely scratches armour (rifles, machine guns) prefers soldiers. With no unit in sight,
+        /// a bunker, flak tower or hangar within 42 m, and last the command post within 40 m.</summary>
+        Health PickTarget(out float dist)
         {
-            SoldierAI best = null; dist = range;
+            dist = 0;
+            if (Type.weapon == WeaponKind.Demolition)
+            {
+                var hard = NearestHard(Sight, out float dh);
+                if (hard != null) { dist = dh; return hard; }
+            }
+            Health best = null; float bs = float.MaxValue;
+            DamageKind how = Type.Damage;
             foreach (var o in All)
             {
                 if (o.team == team || !o.Alive) continue;
                 float d = Vector3.Distance(o.transform.position, transform.position);
-                if (d < dist) { dist = d; best = o; }
+                if (d > Sight) continue;
+                float s = d / Mathf.Max(0.05f, Combat.Factor(how, o.Health.kind));
+                if (s < bs) { bs = s; best = o.Health; dist = d; }
+            }
+            if (best != null) return best;
+
+            float bd = BuildingSight;
+            foreach (var h in Health.All)
+            {
+                if (!h.Alive || h.team == team || (h.kind != TargetKind.Bunker && h.kind != TargetKind.Hangar)) continue;
+                float d = h.DistanceFrom(transform.position);
+                if (d < bd) { bd = d; best = h; dist = d; }
+            }
+            if (best != null) return best;
+            var post = CommandPost.Of(team.Enemy());
+            if (post != null && post.Health.Alive)
+            {
+                float d = post.Health.DistanceFrom(transform.position);
+                if (d < CommandPostSight) { dist = d; return post.Health; }
+            }
+            return null;
+        }
+
+        /// <summary>The nearest enemy vehicle or building (the command post included) within range.</summary>
+        Health NearestHard(float range, out float dist)
+        {
+            Health best = null; dist = range;
+            foreach (var h in Health.All)
+            {
+                if (!h.Alive || h.team == team || (h.kind != TargetKind.Vehicle && !h.IsStructure)) continue;
+                float d = h.DistanceFrom(transform.position);
+                if (d < dist) { dist = d; best = h; }
             }
             return best;
+        }
+
+        /// <summary>How close this unit must be to hit tgt, dist away. Infantry with a close-range weapon fires its rifle
+        /// beyond that range, except flamethrowers closing on anything within 25 m and sappers going for buildings and vehicles.</summary>
+        float Reach(Health tgt, float dist)
+        {
+            bool sapper = Type.weapon == WeaponKind.Demolition;
+            float primary = sapper && tgt.kind == TargetKind.Soldier ? 0f : Type.range; // charges are for buildings and vehicles
+            if (!Type.CarriesRifle) return primary;
+            if (Type.weapon == WeaponKind.Flamethrower && dist <= 25f) return primary;
+            if (sapper && tgt.kind != TargetKind.Soldier) return primary;
+            return Mathf.Max(primary, UnitType.Rifleman.range);
+        }
+
+        /// <summary>The weapon to use on tgt, dist away: the unit's own if it reaches, else the rifle if it carries one.</summary>
+        WeaponKind? WeaponFor(Health tgt, float dist)
+        {
+            bool sapper = Type.weapon == WeaponKind.Demolition;
+            if (dist <= Type.range && !(sapper && tgt.kind == TargetKind.Soldier)) return Type.weapon;
+            if (Type.CarriesRifle && dist <= UnitType.Rifleman.range) return WeaponKind.Rifle;
+            return null;
+        }
+
+        static Vector3 ApproachPoint(Health tgt) =>
+            tgt.kind != TargetKind.Soldier && tgt.Body != null ? tgt.Body.bounds.ClosestPoint(tgt.transform.position + Vector3.up * 0.1f) : tgt.transform.position;
+
+        static Vector3 AimPointOf(Health tgt)
+        {
+            var s = tgt.GetComponent<SoldierAI>();
+            return s != null ? s.HitPoint : tgt.AimPoint;
         }
 
         float LocalOdds()
@@ -251,28 +376,7 @@ namespace Redbaron
 
         void Think()
         {
-            var en = NearestEnemy(rifleRange, out float dist);
-            Health tgt = null;
-            if (en != null) tgt = en.Health;
-            else
-            {
-                float bd = 42;
-                foreach (var b in Bunker.All)
-                    if (b.Health.Alive && b.Health.team != team)
-                    {
-                        float d = Vector3.Distance(b.transform.position, transform.position);
-                        if (d < bd) { bd = d; tgt = b.Health; dist = d; }
-                    }
-                if (tgt == null)
-                {
-                    var post = CommandPost.Of(team.Enemy());
-                    if (post != null && post.Health.Alive)
-                    {
-                        float d = Vector3.Distance(post.transform.position, transform.position);
-                        if (d < 40) { tgt = post.Health; dist = d; }
-                    }
-                }
-            }
+            Health tgt = PickTarget(out float dist);
             target = tgt;
             if (charge > 0) return;
             if (CurrentState == State.Order) return; // primero llegar adonde mandó el jugador
@@ -284,7 +388,16 @@ namespace Redbaron
                 else if (CurrentState != State.InCover) CurrentState = State.Hold;
                 return;
             }
+            // Out of reach (a flamethrower, a sapper's charge, a short-range vehicle): close in, unless holding a spot for the player.
+            if (dist > Reach(tgt, dist))
+            {
+                if (followsLane) { if (CurrentState != State.Assault) { ReleaseCover(); CurrentState = State.Assault; } }
+                else if (CurrentState != State.InCover) CurrentState = State.Hold;
+                return;
+            }
+            if (CurrentState == State.Assault) { CurrentState = State.Hold; Stop(); }
             if (tgt.kind == TargetKind.CommandPost) { CurrentState = State.Hold; return; }
+            if (IsVehicle) { CurrentState = State.Hold; return; } // vehicles never take cover
 
             Vector3 ep = tgt.transform.position;
             if (CurrentState == State.InCover && tgt.kind == TargetKind.Soldier && dist > 10 && coverT > 6 + Random.value * 4 && followsLane)
@@ -311,6 +424,7 @@ namespace Redbaron
 
         bool PickCover(Vector3 enemyPos, bool forward, Vector3 center, float radius)
         {
+            if (IsVehicle) return false;
             float dMe = Flat(enemyPos - transform.position);
             CoverPoint best = null; float bs = float.MaxValue; Vector3 bestSpot = Vector3.zero;
             foreach (var c in CoverPoint.All)
@@ -340,12 +454,13 @@ namespace Redbaron
         }
 
         // ------------------------------------------------------------ Disparo
-        /// <summary>Multiplicador de acierto contra este soldado desde <paramref name="shooter"/>.</summary>
+        /// <summary>Multiplicador de acierto contra este soldado desde <paramref name="shooter"/>. Vehicles never have cover.</summary>
         public float ProtectionAgainst(Vector3 shooter)
         {
+            if (IsVehicle) return 1f;
             switch (CurrentState)
             {
-                case State.Advance: case State.Charge: case State.Order: case State.ToCover: return 1f;
+                case State.Advance: case State.Charge: case State.Order: case State.ToCover: case State.Assault: return 1f;
             }
             if (CurrentState == State.InCover && cover != null) return cover.ProtectionAgainst(transform.position, shooter);
             Vector2 d = RedbaronMap.ToDesign(transform.position);
@@ -355,35 +470,110 @@ namespace Redbaron
 
         float EyeHeight()
         {
+            if (IsVehicle) return lookSize.y * 0.6f;
             if (CurrentState == State.InCover && cover != null && cover.type == CoverType.Trinchera) return 1.55f;
             return CurrentState == State.InCover || CurrentState == State.Hold ? 1.15f : 1.5f;
+        }
+
+        Vector3 Muzzle()
+        {
+            if (aim != null && aim.Muzzle != null) return aim.Muzzle.position + aim.Muzzle.forward * 0.8f;
+            if (IsVehicle) return transform.position + Vector3.up * EyeHeight() + transform.forward * lookSize.z * 0.45f;
+            return transform.position + Vector3.up * EyeHeight();
         }
 
         void Shoot()
         {
             if (target == null || !target.Alive) return;
-            Vector3 eye = transform.position + Vector3.up * EyeHeight();
+            var w = WeaponFor(target, target.DistanceFrom(transform.position));
+            if (w == null) { cd = 0.4f; return; }
+            var weapon = w.Value;
+            if (aim != null && aim.Muzzle != null && !aim.Aimed(7f)) { cd = 0.15f; return; } // the turret is still turning
+            Vector3 eye = Muzzle();
             var ts = target.GetComponent<SoldierAI>();
-            Vector3 aim = ts != null ? target.transform.position + Vector3.up * (ts.EyeHeight() - 0.2f) : target.AimPoint;
-            if (!Combat.HasLineOfSight(eye, aim, target.transform)) { cd = 0.5f; return; }
-            cd = rifleCooldown + Random.Range(0f, 1f);
-            float d = Vector3.Distance(eye, aim);
-            float p;
-            if (ts != null)
-            {
-                p = baseHit * Mathf.Max(0.15f, 1 - d / 60f) * ts.ProtectionAgainst(transform.position);
-                if (CurrentState == State.Charge || charge > 0 || CurrentState == State.Order) p *= 0.6f;
-                if (transform.position.y > target.transform.position.y + 3) p *= 1.25f;
-            }
-            else p = 0.75f;
+            Vector3 at = ts != null ? ts.HitPoint : target.AimPoint;
+            if (weapon != WeaponKind.Grenade && !Combat.HasLineOfSight(eye, at, target.transform)) { cd = 0.5f; return; }
+
+            bool rifle = weapon == WeaponKind.Rifle && Type.weapon != WeaponKind.Rifle; // the rifle of a grenadier, flamethrower or sapper
+            float cool = rifle ? UnitType.Rifleman.cooldown : Type.cooldown;
+            cd = cool + Random.Range(0f, cool * 0.3f);
+            float d = Vector3.Distance(eye, at);
+            float p = HitChance(rifle ? UnitType.Rifleman.hit * 0.9f : Type.hit, d, ts, weapon);
             bool hit = Random.value < p;
-            Combat.Tracer(eye, aim + (hit ? Vector3.zero : Random.insideUnitSphere * 1.5f));
-            Sfx.Rifle(eye);
-            if (anim != null && !string.IsNullOrEmpty(shootTrigger) && animParams.Contains(Animator.StringToHash(shootTrigger))) anim.SetTrigger(shootTrigger);
-            if (hit) target.Damage(1, gameObject);
+
+            switch (weapon)
+            {
+                case WeaponKind.Rifle:
+                    Combat.Tracer(eye, at + (hit ? Vector3.zero : Random.insideUnitSphere * 1.5f));
+                    Sfx.Rifle(eye);
+                    if (anim != null && !string.IsNullOrEmpty(shootTrigger) && animParams.Contains(Animator.StringToHash(shootTrigger))) anim.SetTrigger(shootTrigger);
+                    if (hit) target.Damage(rifle ? 1f : Type.damage, gameObject, DamageKind.Bullet);
+                    break;
+
+                case WeaponKind.MachineGun:
+                    Sfx.BunkerGun(eye);
+                    for (int k = 0; k < Mathf.Max(1, Type.shots); k++)
+                    {
+                        bool h = k == 0 ? hit : Random.value < p;
+                        Combat.Tracer(eye, at + (h ? Vector3.zero : Random.insideUnitSphere * 1.8f));
+                        if (h && target.Alive) target.Damage(Type.damage, gameObject, DamageKind.Bullet);
+                    }
+                    break;
+
+                case WeaponKind.Grenade:
+                {
+                    Vector3 land = target.transform.position + FlatDir(Random.insideUnitSphere) * (hit ? 0.6f : 3.5f);
+                    float dmg = Type.damage, rad = Type.splash; Team side = team; GameObject src = gameObject;
+                    Combat.Lob(eye, land, 0.55f + d * 0.02f, () => { Combat.SmallExplosion(land); Combat.Blast(land, rad, dmg, side, DamageKind.Blast, src); });
+                    break;
+                }
+
+                case WeaponKind.Flamethrower:
+                {
+                    Vector3 burn = at + (hit ? Vector3.zero : FlatDir(Random.insideUnitSphere) * 1.2f);
+                    Combat.Flame(eye, burn);
+                    Combat.Blast(burn, Mathf.Max(0.8f, Type.splash), Type.damage, team, DamageKind.Fire, gameObject);
+                    break;
+                }
+
+                case WeaponKind.Cannon:
+                {
+                    Vector3 burst = at + (hit ? Vector3.zero : FlatDir(Random.insideUnitSphere) * 3f);
+                    Combat.MuzzleSmoke(eye);
+                    Combat.Tracer(eye, burst, 0.12f, 0.12f);
+                    Combat.SmallExplosion(burst);
+                    Combat.Blast(burst, Mathf.Max(0.8f, Type.splash), Type.damage, team, DamageKind.Blast, gameObject);
+                    break;
+                }
+
+                case WeaponKind.Demolition:
+                    Combat.Explosion(at, false);
+                    target.Damage(Type.damage, gameObject, DamageKind.Blast);
+                    Combat.Blast(at, Type.splash, 2f, team, DamageKind.Blast, gameObject); // and anyone standing next to it
+                    break;
+            }
         }
 
-        /// <summary>The soldier's model was replaced (SoldierModels) and has no Animator any more: it walks with AndarMech
+        /// <summary>Chance that a shot from here lands, d metres away. A soldier's cover counts in full against bullets, partly against
+        /// a grenade, and not against flames. Vehicles are big targets with no cover; buildings are hard to miss.</summary>
+        float HitChance(float baseHit, float d, SoldierAI ts, WeaponKind w)
+        {
+            if (ts == null) return w == WeaponKind.Rifle || w == WeaponKind.MachineGun ? 0.75f : 0.85f;
+            float p;
+            if (ts.IsVehicle) p = baseHit * 1.3f * Mathf.Max(0.35f, 1 - d / 90f);
+            else
+            {
+                float prot = ts.ProtectionAgainst(transform.position);
+                if (w == WeaponKind.Flamethrower) prot = 1f;
+                else if (w == WeaponKind.Grenade) prot = Mathf.Sqrt(prot);
+                p = baseHit * Mathf.Max(0.15f, 1 - d / 60f) * prot;
+            }
+            if (CurrentState == State.Charge || charge > 0 || CurrentState == State.Order) p *= 0.6f;
+            if (transform.position.y > target.transform.position.y + 3) p *= 1.25f;
+            return Mathf.Clamp01(p);
+        }
+
+        /// <summary>The soldier's model was replaced (UnitModels) and has no Animator any more: it walks with AndarMech
         /// and falls flat when it dies.</summary>
         public void DropAnimator()
         {
@@ -399,11 +589,19 @@ namespace Redbaron
             if (agent.isOnNavMesh) agent.ResetPath();
             agent.enabled = false;
             foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
-            if (anim != null && !string.IsNullOrEmpty(dieTrigger) && animParams.Contains(Animator.StringToHash(dieTrigger))) anim.SetTrigger(dieTrigger);
-            else StartCoroutine(FallOver());
-            Combat.Puff(transform.position + Vector3.up, new Color(0.54f, 0.5f, 0.42f, 0.6f), 0.8f, 1f, 0.3f);
+            if (IsVehicle)
+            {
+                StartCoroutine(Wreck());
+                RedbaronGame.Log($"{Type.name} de {team.Name()} fuera de combate");
+            }
+            else
+            {
+                if (anim != null && !string.IsNullOrEmpty(dieTrigger) && animParams.Contains(Animator.StringToHash(dieTrigger))) anim.SetTrigger(dieTrigger);
+                else StartCoroutine(FallOver());
+                Combat.Puff(transform.position + Vector3.up, new Color(0.54f, 0.5f, 0.42f, 0.6f), 0.8f, 1f, 0.3f);
+            }
             if (RedbaronGame.Instance != null) RedbaronGame.Instance.OnSoldierDied(this);
-            Destroy(gameObject, 8f);
+            Destroy(gameObject, IsVehicle ? 12f : 8f);
         }
 
         /// <summary>Without a death animation the soldier topples onto its back, faster as it goes (0.45 s). It rises by the
@@ -430,6 +628,38 @@ namespace Redbaron
                 yield return null;
             }
             transform.SetPositionAndRotation(end, to);
+        }
+
+        static readonly int TintId = Shader.PropertyToID("_Tint");
+
+        /// <summary>A knocked-out vehicle blows up, goes dark and smokes. A mech slumps; a tank settles where it stopped.</summary>
+        System.Collections.IEnumerator Wreck()
+        {
+            Combat.Explosion(transform.position + Vector3.up * lookSize.y * 0.5f, true);
+            if (aim != null) aim.Freeze();
+            foreach (var w in GetComponentsInChildren<AndarMech>()) w.enabled = false;
+            var mpb = new MaterialPropertyBlock();
+            foreach (var r in GetComponentsInChildren<MeshRenderer>())
+            {
+                r.GetPropertyBlock(mpb);
+                mpb.SetColor(TintId, new Color(0.3f, 0.28f, 0.26f, 1f));
+                r.SetPropertyBlock(mpb);
+            }
+            bool mech = Type.unitClass == UnitClass.Mech;
+            Quaternion from = transform.rotation, to = from * (mech ? Quaternion.Euler(-14f, 0f, 9f) : Quaternion.Euler(0f, 0f, 4f));
+            Vector3 start = transform.position, end = start - Vector3.up * (mech ? lookSize.y * 0.18f : 0.2f);
+            for (float t = 0; t < 1f; t += Time.deltaTime / 0.8f)
+            {
+                float k = t * t;
+                transform.SetPositionAndRotation(Vector3.Lerp(start, end, k), Quaternion.Slerp(from, to, k));
+                yield return null;
+            }
+            transform.SetPositionAndRotation(end, to);
+            for (int i = 0; i < 8; i++)
+            {
+                Combat.Puff(transform.position + Vector3.up * lookSize.y * 0.7f + Random.insideUnitSphere * 0.5f, new Color(0.18f, 0.17f, 0.16f, 0.75f), 3f, 3f, 3f);
+                yield return new WaitForSeconds(0.9f);
+            }
         }
 
         void UpdateAnimator()

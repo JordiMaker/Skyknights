@@ -351,6 +351,7 @@ namespace Redbaron
                             var go = Instantiate(Pick(basePropPrefabs, r), RedbaronMap.ToWorld(X, Z), Quaternion.Euler(0, r.Next() * 360f, 0), g);
                             go.transform.localScale *= r.Range(1.0f, 1.3f);
                             StripColliders(go);
+                            go.AddComponent<Breakable>(); // crates and barrels burst in a blast
                         }
             }
 
@@ -720,10 +721,18 @@ namespace Redbaron
                         float Z = RedbaronMap.ForTeam(t, Zb);
                         acc.AddBox(RedbaronMap.ToWorld(X, Z, RedbaronMap.Height(X, Z) + 0.1f), new Vector3(2.4f, 0.2f, 0.5f), new Color32(0xd8, 0xd2, 0xbf, 255));
                     }
+                int n = 0;
                 foreach (var hg in RedbaronMap.Hangars)
                 {
+                    // Each hangar is its own object so it can be destroyed (Hangar).
                     float Z = RedbaronMap.ForTeam(t, hg.y);
-                    BuildingModels.AddHangar(acc, RedbaronMap.ToWorld(hg.x, Z), t);
+                    var ha = new MeshAccumulator();
+                    BuildingModels.AddHangar(ha, Vector3.zero, t);
+                    var hgo = ha.ToObject("Hangar_" + t + "_" + n++, g, vertexColorMaterial, true);
+                    hgo.transform.position = RedbaronMap.ToWorld(hg.x, Z);
+                    var hh = GetOrAdd<Health>(hgo);
+                    hh.team = t; hh.kind = TargetKind.Hangar; hh.maxHp = hh.hp = 40; hh.aimHeight = 2f;
+                    GetOrAdd<Hangar>(hgo);
                 }
                 float Zs = RedbaronMap.ForTeam(t, rw.yMin - 1.5f);
                 Vector3 ws = RedbaronMap.ToWorld(rw.xMin - 2, Zs);
@@ -949,23 +958,36 @@ namespace Redbaron
         // ------------------------------------------------------------------ Alambrada
         void BuildWire()
         {
+            // Stretches of up to four spans, each its own object, so a blast cuts the wire where it lands (Breakable).
+            var g = Group("Alambrada");
             var acc = new MeshAccumulator();
+            int spans = 0, n = 0;
+            void Close()
+            {
+                if (acc.VertexCount > 0) acc.ToObject("Alambrada_" + n++, g, vertexColorMaterial, false).AddComponent<Breakable>();
+                acc = new MeshAccumulator(); spans = 0;
+            }
             foreach (float Zw in new[] { 145f, RedbaronMap.MirrorZ(145f) })
             {
                 Vector3? prev = null;
                 for (float X = 2.5f; X <= 97.5f; X += 2.5f)
                 {
                     float Zm = Zw <= 150 ? Zw : 300 - Zw;
-                    if (RedbaronMap.LaneDist(X, Zm) < 3.5f) { prev = null; continue; }
+                    if (RedbaronMap.LaneDist(X, Zm) < 3.5f) { prev = null; Close(); continue; }
                     Vector3 pt = RedbaronMap.ToWorld(X, Zw + (rng.Next() - 0.5f) * 0.8f);
+                    if (spans >= 4) { Close(); if (prev.HasValue) acc.AddBox(prev.Value + Vector3.up * 0.6f, new Vector3(0.15f, 1.2f, 0.15f), new Color32(0x4b, 0x3f, 0x30, 255)); }
                     acc.AddBox(pt + Vector3.up * 0.6f, new Vector3(0.15f, 1.2f, 0.15f), new Color32(0x4b, 0x3f, 0x30, 255));
                     if (prev.HasValue)
+                    {
                         foreach (float hh in new[] { 0.5f, 0.95f })
                             acc.AddCylinder(prev.Value + Vector3.up * hh, pt + Vector3.up * hh, 0.02f, 0.02f, 3, new Color32(0x3a, 0x36, 0x2e, 255));
+                        spans++;
+                    }
                     prev = pt;
                 }
+                Close();
             }
-            acc.ToObject("Alambrada", Root, vertexColorMaterial, false);
+            if (Application.isPlaying) StaticBatchingUtility.Combine(g.gameObject); // one batch, but each stretch can still be hidden
         }
 
         // ------------------------------------------------------------------ Cráteres y hitos

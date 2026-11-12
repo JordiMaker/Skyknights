@@ -101,6 +101,8 @@ namespace Redbaron
             foreach (var c in CoverPoint.All) c.occupants = 0;
             foreach (var b in Bunker.All) b.ResetBunker();
             foreach (var f in FlakTower.All) f.ResetTower();
+            foreach (var h in Hangar.All) h.ResetHangar();
+            Breakable.RestoreAll();
             foreach (var p in CommandPost.All) p.ResetPost();
             if (spawner != null) spawner.ResetWaves();
             Log("Nueva batalla: las oleadas salen de las bases");

@@ -1013,8 +1013,11 @@ namespace Redbaron
                         if (h.kind == TargetKind.Soldier && d < 6) h.Damage(99, b.from.gameObject);
                         else if (h.kind == TargetKind.Bunker && d < 8) h.Damage(6, b.from.gameObject);
                         else if (h.kind == TargetKind.CommandPost && d < 9) h.Damage(12, b.from.gameObject);
+                        else if (h.kind == TargetKind.Hangar && h.DistanceFrom(p) < 3) h.Damage(10, b.from.gameObject);
+                        else if (h.kind == TargetKind.Vehicle && h.DistanceFrom(p) < 5) h.Damage(14, b.from.gameObject);
                     }
                     TreeDestructible.FellAround(p, 4f);
+                    Breakable.BreakAround(p, 6f);
                     Destroy(b.t.gameObject);
                     bombs.RemoveAt(i);
                 }

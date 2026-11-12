@@ -823,21 +823,231 @@ MonoBehaviour:
   soldierEntente: {fileID: 7656848350335012222, guid: e28bee9a300eb413bb50d9edd80482d9, type: 3}
   tintUniforms: 1
   soldierHeight: 1.8
-  kitSoldiersEntente:
-  - {fileID: 919132149155446097, guid: ac3a58dde074d4492b3155ce8ad7a5d8, type: 3}
-  - {fileID: 919132149155446097, guid: ac3a58dde074d4492b3155ce8ad7a5d8, type: 3}
-  - {fileID: 919132149155446097, guid: bddee3c4936b041789dbe9db95658bf9, type: 3}
-  - {fileID: 919132149155446097, guid: 9d25c9e0429be4afbb48fd318c4ea030, type: 3}
-  - {fileID: 919132149155446097, guid: c8f0be19b1ead4af4ba82af9d6ba765e, type: 3}
-  - {fileID: 919132149155446097, guid: d6f94936a785f431d8c4a7960d3fe168, type: 3}
-  kitSoldiersCentrales:
-  - {fileID: 919132149155446097, guid: c716b277955674a7dbbc5e3c3f978982, type: 3}
-  - {fileID: 919132149155446097, guid: c716b277955674a7dbbc5e3c3f978982, type: 3}
-  - {fileID: 919132149155446097, guid: ed6aff6eeca864d76b596b22c4d9a7d1, type: 3}
-  - {fileID: 919132149155446097, guid: 6f6222593b8c4439f8079a431d9c248c, type: 3}
-  - {fileID: 919132149155446097, guid: 0abe14cc4d2b64448a1fe6f6e43dfb7e, type: 3}
-  - {fileID: 919132149155446097, guid: b6fa1062f1364465e86a98401fdb17f8, type: 3}
-  kitSoldierMaterial: {fileID: 2100000, guid: 092fd76431b99478199e3ed7ae481b94, type: 2}
+  unitTypes:
+  - name: Fusilero
+    unitClass: 0
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: ac3a58dde074d4492b3155ce8ad7a5d8, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: c716b277955674a7dbbc5e3c3f978982, type: 3}
+    minCount: 0
+    maxCount: 0
+    hp: 2
+    walkSpeed: 2.6
+    runSpeed: 3.6
+    maxHeight: 6
+    weapon: 0
+    range: 50
+    cooldown: 3.25
+    shots: 1
+    hit: 0.55
+    damage: 1
+    splash: 0
+  - name: Ametrallador
+    unitClass: 0
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: 9d25c9e0429be4afbb48fd318c4ea030, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: 6f6222593b8c4439f8079a431d9c248c, type: 3}
+    minCount: 0
+    maxCount: 0
+    hp: 2
+    walkSpeed: 2.3
+    runSpeed: 3.3
+    maxHeight: 6
+    weapon: 1
+    range: 45
+    cooldown: 4.5
+    shots: 4
+    hit: 0.22
+    damage: 1
+    splash: 0
+  - name: Granadero
+    unitClass: 0
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: bddee3c4936b041789dbe9db95658bf9, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: ed6aff6eeca864d76b596b22c4d9a7d1, type: 3}
+    minCount: 0
+    maxCount: 0
+    hp: 2
+    walkSpeed: 2.6
+    runSpeed: 3.6
+    maxHeight: 6
+    weapon: 2
+    range: 26
+    cooldown: 5
+    shots: 1
+    hit: 0.6
+    damage: 2
+    splash: 2.5
+  - name: Lanzallamas
+    unitClass: 0
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: c8f0be19b1ead4af4ba82af9d6ba765e, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: 0abe14cc4d2b64448a1fe6f6e43dfb7e, type: 3}
+    minCount: 0
+    maxCount: 0
+    hp: 2
+    walkSpeed: 2.4
+    runSpeed: 3.4
+    maxHeight: 6
+    weapon: 3
+    range: 12
+    cooldown: 2.4
+    shots: 1
+    hit: 0.85
+    damage: 2
+    splash: 2
+  - name: Zapador
+    unitClass: 0
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: d6f94936a785f431d8c4a7960d3fe168, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: b6fa1062f1364465e86a98401fdb17f8, type: 3}
+    minCount: 0
+    maxCount: 0
+    hp: 2
+    walkSpeed: 2.6
+    runSpeed: 3.6
+    maxHeight: 6
+    weapon: 4
+    range: 4.5
+    cooldown: 6
+    shots: 1
+    hit: 1
+    damage: 12
+    splash: 2.5
+  - name: Tanque ligero
+    unitClass: 1
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: e971678e29af242ff86b0d6253e48339, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: e971678e29af242ff86b0d6253e48339, type: 3}
+    minCount: 1
+    maxCount: 1
+    hp: 24
+    walkSpeed: 2.2
+    runSpeed: 2.64
+    maxHeight: 6
+    weapon: 5
+    range: 45
+    cooldown: 4.5
+    shots: 1
+    hit: 0.5
+    damage: 3
+    splash: 2.5
+  - name: Tanqueta lanzallamas
+    unitClass: 1
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: 4938107a646784fdfbba776bd318b4cf, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: 4938107a646784fdfbba776bd318b4cf, type: 3}
+    minCount: 1
+    maxCount: 1
+    hp: 18
+    walkSpeed: 2.6
+    runSpeed: 3.1200001
+    maxHeight: 6
+    weapon: 3
+    range: 14
+    cooldown: 1.8
+    shots: 1
+    hit: 0.9
+    damage: 3
+    splash: 2.5
+  - name: Tanque pesado
+    unitClass: 1
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: 4efa228023d364499834c545da54f5ae, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: 4efa228023d364499834c545da54f5ae, type: 3}
+    minCount: 1
+    maxCount: 1
+    hp: 40
+    walkSpeed: 1.6
+    runSpeed: 1.9200001
+    maxHeight: 6
+    weapon: 5
+    range: 50
+    cooldown: 5
+    shots: 1
+    hit: 0.5
+    damage: 4
+    splash: 3
+  - name: Mech ligero
+    unitClass: 2
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: baf3b9154a84548bd9bf0f7944e0cb41, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: baf3b9154a84548bd9bf0f7944e0cb41, type: 3}
+    minCount: 1
+    maxCount: 1
+    hp: 14
+    walkSpeed: 2.4
+    runSpeed: 2.88
+    maxHeight: 6
+    weapon: 1
+    range: 40
+    cooldown: 2.5
+    shots: 4
+    hit: 0.3
+    damage: 1
+    splash: 0
+  - name: Mech explorador
+    unitClass: 2
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: 244807eb9a1924e77817777d069b8a93, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: 244807eb9a1924e77817777d069b8a93, type: 3}
+    minCount: 1
+    maxCount: 1
+    hp: 16
+    walkSpeed: 3.4
+    runSpeed: 4.0800004
+    maxHeight: 6
+    weapon: 1
+    range: 50
+    cooldown: 2.5
+    shots: 3
+    hit: 0.3
+    damage: 1
+    splash: 0
+  - name: Mech de asalto
+    unitClass: 2
+    modelsEntente:
+    - {fileID: 919132149155446097, guid: a897b2a1681714df19759003d9c5d76c, type: 3}
+    modelsCentrales:
+    - {fileID: 919132149155446097, guid: a897b2a1681714df19759003d9c5d76c, type: 3}
+    minCount: 1
+    maxCount: 1
+    hp: 30
+    walkSpeed: 1.8
+    runSpeed: 2.16
+    maxHeight: 6
+    weapon: 5
+    range: 45
+    cooldown: 4
+    shots: 1
+    hit: 0.5
+    damage: 3
+    splash: 3
+  rotation:
+  - Fusilero
+  - Tanque ligero
+  - Granadero
+  - Mech ligero
+  - Ametrallador
+  - Tanqueta lanzallamas
+  - Lanzallamas
+  - Mech explorador
+  - Zapador
+  - Tanque pesado
+  - Fusilero
+  - Mech de asalto
+  laneStep: 4
+  kitMaterial: {fileID: 2100000, guid: 092fd76431b99478199e3ed7ae481b94, type: 2}
   waveEvery: 28
   minPerLane: 2
   maxPerLane: 4

@@ -21,10 +21,29 @@
 - Paint, metal, wood, canvas and stone have a grain texture, so the models no longer look like plastic.
 - The Central Powers' flags, HUD bars and menu cards are green now. The Entente keeps its blue.
 
-**Infantry**
-- The soldiers are the big-headed soldiers of the Redbaron colour kit: riflemen, grenadiers, machine gunners, flamethrower troops and sappers, picked at random. For now they all fight as riflemen.
-- The Entente wears the Adrian helmet and navy blue, and the Central Powers the steel helmet and green.
+**Ground forces**
+- The soldiers are the big-headed soldiers of the Redbaron colour kit. The Entente wears the Adrian helmet and navy blue, and the Central Powers the steel helmet and green.
 - They march with the kit's walking animation. When killed, they topple onto their back in half a second and lie on the ground.
+- Tanks and mechs join the waves: a light tank, a flamethrower tankette, a heavy tank, a light mech, a scout mech and an assault mech, painted in their side's colours.
+- The waves take turns: each lane sends an infantry squad, then a vehicle, then another squad. Infantry squads rotate through riflemen, grenadiers, machine gunners, flamethrower troops and sappers, and vehicles alternate between tanks and mechs.
+- Each type fights with its own weapon:
+  - riflemen fire single shots;
+  - machine gunners fire bursts of four;
+  - grenadiers throw grenades up to 26 m;
+  - flamethrower troops close in to 12 m and burn through cover;
+  - sappers go for buildings and vehicles and blow them up with charges;
+  - tanks and the assault mech fire shells that burst;
+  - the other mechs fire machine guns;
+  - the tankette burns at 14 m.
+- Grenadiers, flamethrower troops and sappers also carry a rifle for targets out of their own weapon's reach.
+- Armour takes a tenth of a bullet's damage and half of a flame's. Shells, grenades, charges and bombs do full damage. Vehicles never take cover; they close in until their weapon reaches.
+- Turrets and mech torsos turn towards their target before they fire. A knocked-out vehicle blows up, goes dark and smokes.
+
+**Destructible structures**
+- Hangars can be destroyed (40 points). Bombs, shells, charges and gunfire bring them down; the planes keep taking off from the runway.
+- Infantry, tanks and mechs now attack the anti-aircraft towers too, as well as bunkers, hangars and the command post. Before, only bombs reached the towers.
+- Crates and barrels at the bases and the barbed wire break in any blast. They come back at the start of the next battle, along with the buildings.
+- The building cards in the menu say so.
 
 **Fixes**
 - Smoke and fire effects no longer throw an error every frame after the scripts are recompiled in Play mode. That error filled the Editor log and left the effect stuck on screen.

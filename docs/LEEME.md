@@ -509,9 +509,66 @@ Some earlier sections describe the previous rules: the aim assist in "Flying you
 
 The infantry wears the big-headed soldiers of the colour kit. The models are in `Assets/Redbaron/Soldados`: five troop types, each with the Adrian helmet (Entente) and the steel helmet (Central Powers). The mortar team is left out, because it has no legs to march with.
 
-- **Choice:** WaveSpawner → Kit Soldiers Entente / Kit Soldiers Centrales lists the models, and each new soldier picks one at random. The rifleman is in the list twice, so a third of the soldiers are riflemen. For now every type fights as a rifleman. Empty lists bring back the Toon Soldiers look.
-- **How it is done:** the soldier prefabs are unchanged, so Quick RTS selection, the NavMesh agent and the collider still work. When a soldier spawns, SoldierModels removes the Toon Soldiers mesh, bones and Animator, and puts the kit model in their place, scaled to 1.8 m. It also gives Quick Outline the new meshes, so selected soldiers are still outlined.
+- **Choice:** each unit type in WaveSpawner → Unit Types has its models for each side (see "Tanks, mechs and unit types" below). A type with no models keeps the Toon Soldiers look.
+- **How it is done:** the soldier prefabs are unchanged, so Quick RTS selection, the NavMesh agent and the collider still work. When a soldier spawns, UnitModels (formerly SoldierModels) removes the Toon Soldiers mesh, bones and Animator, and puts the kit model in their place, scaled to 1.8 m. It also gives Quick Outline the new meshes, so selected soldiers are still outlined.
 - **Colours and draw calls:** each model is baked once per side into vertex-coloured meshes (body and both legs) in its side's theme. The Entente gets navy blue and the Central Powers green. Every soldier of that model and side shares those meshes and one material, `Materials/Redbaron_Soldados.mat` (LowPolyVertexColor with GPU instancing on). A soldier therefore costs three draw calls instead of one per material. The kit's grain shader is not used on soldiers: at their size it does not show.
 - **Animation:** the kit's AndarMech swings the legs at walking pace (28° at the hip, 1.5 steps per second at full speed). With no Animator, a soldier that is killed topples onto its back in 0.45 s. It rises by the depth of its back and backpack, so it lies on the ground instead of sinking into it.
 - **Import:** the soldier OBJs have Read/Write on, because their meshes are baked at runtime. They got the same two fixes as the ships: `o` → `g` and MTL `Kd` converted to linear.
 - **Kit script change:** `PaletaColor.ColorFor` was added. It returns the colour a material takes in a theme.
+
+## Tanks, mechs and unit types (added 2026-11-12)
+
+The waves now bring eleven unit types: five infantry types, three tanks and three mechs. The vehicle models are in `Assets/Redbaron/Tanques` (Lince, Escarabajo, Mastodonte) and `Assets/Redbaron/Mechs` (Tetera, Zancudo, Caldera). They got the same import fixes as the soldiers.
+
+**The roster (WaveSpawner → Unit Types).** Each type sets its models per side, units per lane, hit points, speed and weapon: range, cooldown, rounds per burst, hit chance, damage and blast radius. The defaults are in `UnitType.Defaults()` (Scripts/Units/UnitTypes.cs).
+
+| Type | Model | Hit points | Weapon |
+|---|---|---|---|
+| Fusilero | Fusilero | 2 | Rifle, 50 m, one shot every 3.25 s |
+| Ametrallador | Ametrallador | 2 | Machine gun, 45 m, bursts of four every 4.5 s |
+| Granadero | Granadero | 2 | Grenades, 26 m, 2.5 m blast |
+| Lanzallamas | Lanzallamas | 2 | Flamethrower, 12 m; closes in on anything within 25 m |
+| Zapador | Zapador | 2 | Demolition charge at 4.5 m, 12 damage; goes for buildings and vehicles first |
+| Tanque ligero | Lince | 24 | Turret cannon, 45 m, 2.5 m blast |
+| Tanqueta lanzallamas | Escarabajo | 18 | Turret flamethrower, 14 m |
+| Tanque pesado | Mastodonte | 40 | Hull cannon, 50 m, 3 m blast (it turns its hull to aim) |
+| Mech ligero | Tetera | 14 | Machine guns, 40 m |
+| Mech explorador | Zancudo | 16 | Machine guns, 50 m, fast |
+| Mech de asalto | Caldera | 30 | Cannon, 45 m, 3 m blast |
+
+Grenadiers, flamethrower troops and sappers also carry a rifle for targets beyond their own weapon. Machine gunners and riflemen do not need one.
+
+**Waves (WaveSpawner → Rotation, Lane Step).** Each wave, every lane sends the next entry of the rotation. Lane 2 starts 4 entries further along and lane 3 starts 8 entries further along. The default rotation alternates an infantry squad and a vehicle, and the vehicles alternate between tanks and mechs. With an even lane step, all three lanes send infantry in one wave and vehicles in the next. An infantry squad has 2–4 men, and a vehicle comes alone. A vehicle counts as three units towards the cap of 60 per side.
+
+**Damage (Combat.Factor).** Bullets do a tenth of their damage to vehicles, and flames do half. Flames do half to buildings too. Shells, grenades, charges and bombs do full damage to everything. Blasts lose strength towards their edge, down to 30 % at the rim, and never hurt their own side, the same as the bombs. A bomb does 14 damage to a vehicle within 5 m.
+
+**Behaviour.**
+- Units pick the nearest enemy. A weapon that barely scratches armour (rifles, machine guns) prefers soldiers.
+- With no enemy unit in sight (50 m), units attack bunkers, flak towers and hangars within 42 m, and the command post within 40 m.
+- A unit whose weapon does not reach closes in. Vehicles never take cover. A tank turns its turret, and a mech its torso, before it fires. The torso turns up to 100° from the legs.
+- The Mastodonte has no turret, so it turns its hull.
+- Your Entente vehicles obey Quick RTS orders like your soldiers.
+
+**How the models are built (UnitModels).**
+- The kit's OBJ files put every part at the model origin, so the joints (hips, knees, arms, torso, turret, gun) are taken from the kit's GLB files and written into a table in UnitModels.
+- Each part is baked once per model and side, like the soldiers.
+- Wheels go into the hull, because they do not turn. Each side's insignia goes on the part it sits on.
+- A tank costs three draw calls, and a mech six to nine.
+- Mechs walk with the kit's AndarMech, and turrets and torsos turn with UnitAim.
+- Vehicles taller than 6 m are scaled down to 6 m, so they stay below the planes' flight plane. That applies to the Zancudo and the Caldera.
+- A knocked-out vehicle blows up, darkens and smokes for a few seconds. A mech slumps.
+
+## Destructible structures (added 2026-11-12)
+
+- **Hangars** now have 40 hit points and their own object (Hangar). A bomb within 3 m does 10 damage, so four bombs bring a hangar down. A destroyed hangar collapses. It is only a target: the planes keep taking off from the runway.
+- **Bunkers, flak towers and command posts** can now be attacked by every unit type, not only by bombs.
+- **Crates and barrels** at the bases, and the **barbed wire** in stretches of four spans, are breakable (Breakable). Any blast breaks them: bombs, shells, grenades, flames and charges.
+- **New battle:** buildings, crates and wire all come back when a new battle starts.
+
+Some things stay indestructible on purpose:
+- the bridges and the ford, which carry the lanes;
+- the trenches and the terrain;
+- the rocks and the cliff around the map;
+- the airfield's runway markings.
+
+Trees still fall to bombs and to large blasts.

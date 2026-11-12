@@ -153,7 +153,7 @@ MonoBehaviour:
       value: 42 m
     - label: "R\xE1faga"
       value: 2 disparos cada 1,75 s
-    description: "Nido de ametralladora de hormig\xF3n con sacos terreros. Dispara a la infanter\xEDa enemiga que se acerca; cuatro bombas bien puestas lo destruyen."
+    description: "Nido de ametralladora de hormig\xF3n con sacos terreros. Dispara a la infanter\xEDa y los blindados enemigos que se acercan. Cuatro bombas bien puestas lo destruyen, y tambi\xE9n caen ante granadas, ca\xF1onazos y cargas de zapador."
   - name: "Torre antia\xE9rea"
     model: 4
     prefab: {fileID: 919132149155446097, guid: d01b5ca0f521d4a1e8003ce88f66bfc6, type: 3}
@@ -171,19 +171,21 @@ MonoBehaviour:
       value: un proyectil cada 2,5 s
     - label: "Explosi\xF3n"
       value: "5 m alrededor del avi\xF3n, \u22121 de energ\xEDa"
-    description: "Junto al puesto de mando. Dispara a los aviones enemigos que se acercan, sin adelantarse a su movimiento: el proyectil estalla donde estaba el avi\xF3n, as\xED que un avi\xF3n r\xE1pido escapa y uno lento o que gira cae en la explosi\xF3n. Los aviones pasan por encima; tres bombas la destruyen."
+    description: "Junto al puesto de mando. Dispara a los aviones enemigos que se acercan, sin adelantarse a su movimiento: el proyectil estalla donde estaba el avi\xF3n, as\xED que un avi\xF3n r\xE1pido escapa y uno lento o que gira cae en la explosi\xF3n. Los aviones pasan por encima. Tres bombas la destruyen, y la infanter\xEDa, los tanques y los mechs tambi\xE9n la atacan."
   - name: Hangar
     model: 2
     prefab: {fileID: 0}
     count: Dos por bando
     stats:
     - label: Resistencia
-      value: indestructible
+      value: 40
+    - label: "Da\xF1o por bomba"
+      value: 10 (a menos de 3 m)
     - label: "Funci\xF3n"
       value: "despegue y reaparici\xF3n"
     - label: "Tama\xF1o"
       value: "8,6 \xD7 5 \xD7 12 m"
-    description: "Aqu\xED despegan y reaparecen los aviones de su bando. Las bombas que caen sobre el aer\xF3dromo enemigo suman en el marcador \xABBombas en aer\xF3dromo\xBB."
+    description: "Aqu\xED despegan y reaparecen los aviones de su bando. Cuatro bombas lo derriban, igual que los ca\xF1onazos y las cargas de los zapadores; aunque caiga, los aviones siguen despegando de la pista. Las bombas que caen sobre el aer\xF3dromo enemigo suman en el marcador \xABBombas en aer\xF3dromo\xBB."
   - name: Punto de recarga
     model: 3
     prefab: {fileID: 0}

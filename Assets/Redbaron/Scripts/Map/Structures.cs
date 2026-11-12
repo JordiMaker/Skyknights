@@ -112,9 +112,94 @@ namespace Redbaron
                 bool hit = Random.value < p;
                 Vector3 to = best.Health.AimPoint + (hit ? Vector3.zero : Random.insideUnitSphere * 1.5f);
                 Combat.Tracer(eye, to);
-                if (hit && best.Alive) best.Health.Damage(1, gameObject);
+                if (hit && best.Alive) best.Health.Damage(1, gameObject, DamageKind.Bullet); // little use against a tank
             }
         }
+
+        void OnEnable() { All.Add(this); }
+        void OnDisable() { All.Remove(this); }
+    }
+
+    /// <summary>Hangar of an airfield. It has no weapon, but bombs, shells, charges and gunfire bring it down like any other building.</summary>
+    [RequireComponent(typeof(Health))]
+    public class Hangar : MonoBehaviour
+    {
+        public static readonly List<Hangar> All = new List<Hangar>();
+        public Health Health { get; private set; }
+        Vector3 scale0;
+
+        void Awake()
+        {
+            Health = GetComponent<Health>();
+            scale0 = transform.localScale;
+            Health.Died += (h, src) =>
+            {
+                for (int k = 0; k < 2; k++) Combat.Explosion(transform.position + new Vector3(Random.Range(-3f, 3f), 2 + k, Random.Range(-4f, 4f)), true);
+                transform.localScale = new Vector3(scale0.x, scale0.y * 0.3f, scale0.z);
+                RedbaronGame.Log($"Hangar de {Health.team.Name()} destruido");
+            };
+        }
+
+        public void ResetHangar()
+        {
+            Health.Restore();
+            transform.localScale = scale0;
+        }
+
+        void OnEnable() { All.Add(this); }
+        void OnDisable() { All.Remove(this); }
+    }
+
+    /// <summary>
+    /// A prop with no hit points (crate, barrel, a stretch of barbed wire) that any blast breaks:
+    /// it vanishes in a puff of dust and comes back for the next battle.
+    /// </summary>
+    public class Breakable : MonoBehaviour
+    {
+        public static readonly List<Breakable> All = new List<Breakable>();
+        public bool Broken { get; private set; }
+        Renderer[] renderers;
+        Vector3 center; float radius;
+
+        void Awake() { Measure(); }
+
+        void Measure()
+        {
+            renderers = GetComponentsInChildren<Renderer>(true);
+            if (renderers.Length == 0) { center = transform.position; radius = 0.5f; return; }
+            Bounds b = renderers[0].bounds;
+            foreach (var r in renderers) b.Encapsulate(r.bounds);
+            center = b.center;
+            radius = Mathf.Max(0.4f, Mathf.Max(b.extents.x, b.extents.z));
+        }
+
+        public static void BreakAround(Vector3 p, float r)
+        {
+            for (int i = All.Count - 1; i >= 0; i--)
+            {
+                var b = All[i];
+                if (b == null || b.Broken) continue;
+                Vector3 d = b.center - p; d.y = 0;
+                if (d.magnitude < r + b.radius * 0.5f) b.Break();
+            }
+        }
+
+        public void Break()
+        {
+            if (Broken) return;
+            Broken = true;
+            foreach (var r in renderers) if (r != null) r.enabled = false;
+            Combat.Puff(center, new Color(0.5f, 0.45f, 0.36f, 0.75f), 1.2f, 1.5f + radius, 1f);
+        }
+
+        public void Restore()
+        {
+            if (!Broken) return;
+            Broken = false;
+            foreach (var r in renderers) if (r != null) r.enabled = true;
+        }
+
+        public static void RestoreAll() { foreach (var b in All) if (b != null) b.Restore(); }
 
         void OnEnable() { All.Add(this); }
         void OnDisable() { All.Remove(this); }

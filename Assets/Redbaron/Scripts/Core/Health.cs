@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Redbaron
 {
-    public enum TargetKind { Soldier, Bunker, CommandPost, Plane, Hangar }
+    public enum TargetKind { Soldier, Bunker, CommandPost, Plane, Hangar, Vehicle }
 
     /// <summary>Vida y bando de cualquier cosa que se puede atacar.</summary>
     public class Health : MonoBehaviour
@@ -20,6 +20,27 @@ namespace Redbaron
 
         public bool Alive => hp > 0;
         public Vector3 AimPoint => transform.position + Vector3.up * aimHeight;
+        /// <summary>A building: a bunker or flak tower, a command post or a hangar.</summary>
+        public bool IsStructure => kind == TargetKind.Bunker || kind == TargetKind.CommandPost || kind == TargetKind.Hangar;
+
+        Collider body; bool bodyLooked;
+        /// <summary>The collider of a building or vehicle, used to measure distances to its sides instead of its centre.</summary>
+        public Collider Body
+        {
+            get
+            {
+                if (!bodyLooked) { body = GetComponent<Collider>(); bodyLooked = true; }
+                return body;
+            }
+        }
+
+        /// <summary>Distance from p to this target: to a soldier's feet (on the ground plane), to the box of a building or vehicle.</summary>
+        public float DistanceFrom(Vector3 p)
+        {
+            if (kind != TargetKind.Soldier && Body != null) return Vector3.Distance(Body.bounds.ClosestPoint(p), p);
+            Vector3 d = transform.position - p; d.y = 0;
+            return d.magnitude;
+        }
 
         public event Action<Health, GameObject> Died;
         public event Action<Health, float, GameObject> Damaged;
@@ -35,6 +56,9 @@ namespace Redbaron
             Damaged?.Invoke(this, amount, source);
             if (hp <= 0) Died?.Invoke(this, source);
         }
+
+        /// <summary>Damage scaled by what it is and what it hits (Combat.Factor): bullets barely scratch armour.</summary>
+        public void Damage(float amount, GameObject source, DamageKind how) => Damage(amount * Combat.Factor(how, kind), source);
 
         public void Restore()
         {
