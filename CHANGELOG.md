@@ -58,6 +58,15 @@
   - nobody charges with a squad that has lost a quarter of its men.
 - Your squads holding a position for you never fall back on their own.
 
+**AI test scene**
+- `Redbaron_PruebaIA.unity` shows one hunter on the battle map with no waves and no planes. It crosses the map looking for enemies: soldiers dug in, a tank, a patrolling mech and grenadiers that come after it.
+- On screen:
+  - its path, its target and the cover it runs to are drawn;
+  - every unit has a label saying what it is doing;
+  - a panel shows the hunter's state, target, weapon and suppression, with a log of its decisions.
+- Buttons pick any of the 11 unit types as the hunter, switch sides, reset the enemies and set the speed. The camera follows the hunter; Tab follows another unit.
+- It is for the Editor only and is not in the phone build.
+
 **Destructible structures**
 - Hangars can be destroyed (40 points). Bombs, shells, charges and gunfire bring them down; the planes keep taking off from the runway.
 - Infantry, tanks and mechs now attack the anti-aircraft towers too, as well as bunkers, hangars and the command post. Before, only bombs reached the towers.

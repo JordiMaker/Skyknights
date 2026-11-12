@@ -125,11 +125,28 @@ namespace Redbaron
         {
             bool vehicle = type != null && type.IsVehicle;
             Vector3 p = path[0] + new Vector3(Random.Range(-2f, 2f), 0, (t == Team.Centrales ? -1 : 1) * k * (vehicle ? 7f : 1.8f));
+            var ai = SpawnAt(t, type, p, Quaternion.LookRotation(path[1] - path[0]), lane, player, player ? playerAutoAdvance : true, prefab);
+            if (player && !playerAutoAdvance)
+            {
+                float x = RedbaronMap.Lanes[lane][Mathf.Min(1, RedbaronMap.Lanes[lane].Length - 1)].x;
+                if (lane == 1) x = 50;
+                Vector3 rally = RedbaronMap.ToWorld(x + Random.Range(-4f, 4f), RedbaronMap.ForTeam(t, rallyZm + Random.Range(-3f, 3f)));
+                ai.OrderMove(rally);
+            }
+            return ai;
+        }
+
+        /// <summary>One unit of type for side t at p (snapped to the NavMesh), dressed in its kit model. Used by the waves and
+        /// by test scenes (AITestBench). prefab = null takes the side's soldier prefab.</summary>
+        public SoldierAI SpawnAt(Team t, UnitType type, Vector3 p, Quaternion rot, int lane, bool player, bool advance, GameObject prefab = null)
+        {
+            if (prefab == null) prefab = t == Team.Centrales ? (soldierCentrales != null ? soldierCentrales : soldierEntente) : (soldierEntente != null ? soldierEntente : soldierCentrales);
+            bool vehicle = type != null && type.IsVehicle;
             if (NavMesh.SamplePosition(p, out var hit, 6f, NavMesh.AllAreas)) p = hit.position;
-            var go = Instantiate(prefab, p, Quaternion.LookRotation(path[1] - path[0]));
+            var go = Instantiate(prefab, p, rot);
             go.name = type != null ? $"{type.name}_{t}_{lane}" : $"Soldado_{t}_{lane}";
             var ai = RedbaronMapBuilder.GetOrAdd<SoldierAI>(go);
-            ai.Init(t, lane, player, player ? playerAutoAdvance : true, type);
+            ai.Init(t, lane, player, advance, type);
 
             UnitModels.Look look = null;
             var looks = type == null ? null : t == Team.Centrales ? type.modelsCentrales : type.modelsEntente;
@@ -147,15 +164,11 @@ namespace Redbaron
                 cc.height = 1.8f / s; cc.radius = 0.3f / s; cc.center = new Vector3(0, 0.9f / s, 0);
             }
             if (tintUniforms && look == null) Tint(go, t.Uniform()); // the kit units already wear their side's colours
-            if (player && !playerAutoAdvance)
-            {
-                float x = RedbaronMap.Lanes[lane][Mathf.Min(1, RedbaronMap.Lanes[lane].Length - 1)].x;
-                if (lane == 1) x = 50;
-                Vector3 rally = RedbaronMap.ToWorld(x + Random.Range(-4f, 4f), RedbaronMap.ForTeam(t, rallyZm + Random.Range(-3f, 3f)));
-                ai.OrderMove(rally);
-            }
             return ai;
         }
+
+        /// <summary>The type with this name (case does not matter), or null.</summary>
+        public UnitType TypeByName(string name) => TypeNamed(name);
 
         static readonly int ColorId = Shader.PropertyToID("_Color");
         static void Tint(GameObject go, Color c)

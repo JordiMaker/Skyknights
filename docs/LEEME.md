@@ -624,3 +624,45 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
 - Machine gunners stay in cover 14 s before moving up (the others 6 s), and never charge.
 - Grenadiers and flamethrower troops close in on men in cover and on bunkers within 40 m.
 - Nobody charges with a squad that has lost a quarter of its men.
+
+## AI test scene (added 2026-11-12)
+
+`Assets/Redbaron/Scenes/Redbaron_PruebaIA.unity` is a copy of the battle scene with no waves (WaveSpawner disabled), no planes (AirWar disabled) and no phone controls, plus the **Banco_IA** object (AITestBench, Scripts/Testing). Open it and press Play. It is not in the build settings, so the APK does not include it.
+
+**The hunter.** It is one unit of the chosen type and side, starting 38 design units from its own end on the centre lane.
+- When nothing is in sight, it heads for the nearest enemy anywhere on the map (SoldierAI.Hunt), and failing that for the nearest enemy building.
+- Whatever it meets on the way, it fights with the normal AI: it takes cover, closes in, charges, falls back and dodges.
+- When it dies, it comes back after 4 s.
+
+**The enemies (AITestBench → Enemies).** Each entry has a unit type, how many, where they stand, and how they behave: **Hold** (dug in), **Patrol** (between two points) or **Hunt** (after the hunter). Positions are design coordinates measured from that side's own end of the map. The defaults are:
+- three riflemen and a machine gunner in the front trench;
+- a light tank;
+- a scout mech patrolling the west side;
+- two grenadiers hunting.
+
+The map's bunkers, flak tower, hangars and command post are there too. When every enemy is down, they all come back.
+
+**On screen.**
+- Lines:
+  - yellow: the NavMesh path the followed unit has worked out;
+  - red: what it is aiming at;
+  - green disc: the cover, fallback point or escape spot it is heading for.
+- Labels over every unit within 80 m give its type and what it is doing.
+- The panel gives the hunter's type, life, state, target and distance, weapon, suppression and kills. It also keeps a log of its last decisions (state changes, new targets, kills).
+
+**Controls.**
+- Panel buttons:
+  - pick the hunter's type (all 11);
+  - switch sides;
+  - reset the enemies;
+  - set the speed (x0.5 to x4);
+  - follow the next unit;
+  - turn the labels and lines on or off.
+- Keys and mouse:
+  - Tab also follows the next unit;
+  - right mouse or Q/E turn the camera;
+  - the wheel zooms.
+
+The camera is switched to perspective, because the Quick RTS camera is orthographic and would cut the ground off below the unit.
+
+**About Low Poly Shooter Pack - Free Sample (Infima Games).** It was checked for this scene and not imported. It has no enemy AI: it is a first-person player controller with weapons, pop-up targets and explosive barrels. It needs the new Input System and Post Processing, and it ships its own ProjectSettings and Packages/manifest.json.

@@ -69,6 +69,10 @@ namespace Redbaron
         public float Length => lookSize.z;
         /// <summary>Counter for the tests: how often a soldier jumped clear of a grenade or bomb.</summary>
         public static int Evades;
+        /// <summary>Where it is heading when it has nothing to fight (a hunt objective, else its lane).</summary>
+        public bool Hunting => hasObjective;
+        /// <summary>The spot it is running to or holding: cover, a fallback point or where it jumps clear. For test scenes.</summary>
+        public Vector3? DebugSpot => CurrentState == State.ToCover || CurrentState == State.InCover || CurrentState == State.Fallback || CurrentState == State.Evade ? spot : (Vector3?)null;
         /// <summary>Where others aim at this unit.</summary>
         public Vector3 HitPoint => IsVehicle ? transform.position + Vector3.up * lookSize.y * 0.5f : transform.position + Vector3.up * (EyeHeight() - 0.2f);
 
@@ -92,6 +96,7 @@ namespace Redbaron
         bool hasOrderArea;
         float evadeT;
         bool escorting, waitForEscort, retreated;
+        Vector3 objective; bool hasObjective;
         readonly HashSet<int> animParams = new HashSet<int>();
 
         void Awake()
@@ -278,8 +283,19 @@ namespace Redbaron
         static float Flat(Vector3 v) { v.y = 0; return v.magnitude; }
         static Vector3 FlatDir(Vector3 v) { v.y = 0; return v; }
 
+        /// <summary>Go and look for the enemy at p instead of following the lane (test scenes, AITestBench). It still fights
+        /// whatever it meets on the way; with nothing in sight it walks on to p.</summary>
+        public void Hunt(Vector3 p) { objective = p; hasObjective = true; autoAdvance = true; }
+        public void StopHunt() { hasObjective = false; }
+
         void FollowLane(float speed)
         {
+            if (hasObjective)
+            {
+                if (Flat(objective - transform.position) < 3f) { hasObjective = false; Stop(); return; }
+                SetDest(objective, speed);
+                return;
+            }
             if (path == null) return;
             if (!autoAdvance && playerControlled) { CurrentState = State.Hold; Stop(); return; }
             Vector3 a = path[Mathf.Max(0, wi - 1)], b = path[Mathf.Min(wi, path.Count - 1)];
