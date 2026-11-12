@@ -159,6 +159,7 @@ namespace Redbaron
                 transform.localScale = Vector3.one * (0.5f + grow * Mathf.Min(1, k * 1.4f));
                 transform.position += Vector3.up * rise * Time.deltaTime;
                 var c = c0; c.a = c0.a * (1 - k * k);
+                if (mpb == null) mpb = new MaterialPropertyBlock(); // a script reload in Play mode keeps mr but drops the block
                 mpb.SetColor("_Color", c);
                 mr.SetPropertyBlock(mpb);
             }

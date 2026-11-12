@@ -19,6 +19,14 @@ namespace Redbaron
         [Tooltip("Altura a la que se escala el modelo (m).")]
         public float soldierHeight = 1.8f;
 
+        [Header("Big-headed soldiers (Redbaron colour kit)")]
+        [Tooltip("Entente infantry models (Adrian helmet), one picked at random for each soldier. They replace the prefab's Toon Soldiers look. Empty = keep that look.")]
+        public GameObject[] kitSoldiersEntente;
+        [Tooltip("Central Powers infantry models (steel helmet).")]
+        public GameObject[] kitSoldiersCentrales;
+        [Tooltip("Material for the kit soldiers: Redbaron/LowPolyVertexColor with GPU instancing on.")]
+        public Material kitSoldierMaterial;
+
         [Header("Oleadas")]
         public float waveEvery = 28f;
         public int minPerLane = 2, maxPerLane = 4;
@@ -69,6 +77,9 @@ namespace Redbaron
                     if (NavMesh.SamplePosition(p, out var hit, 6f, NavMesh.AllAreas)) p = hit.position;
                     var go = Instantiate(prefab, p, Quaternion.LookRotation(path[1] - path[0]));
                     go.name = $"Soldado_{t}_{lane}";
+                    var looks = t == Team.Centrales ? kitSoldiersCentrales : kitSoldiersEntente;
+                    bool kitLook = looks != null && looks.Length > 0
+                        && SoldierModels.Apply(go, looks[Random.Range(0, looks.Length)], t, kitSoldierMaterial);
                     if (soldierHeight > 0) RedbaronMapBuilder.FitHeight(go, soldierHeight);
                     var agent = RedbaronMapBuilder.GetOrAdd<NavMeshAgent>(go);
                     agent.Warp(p);
@@ -80,7 +91,7 @@ namespace Redbaron
                     }
                     var ai = RedbaronMapBuilder.GetOrAdd<SoldierAI>(go);
                     ai.Init(t, lane, player, player ? playerAutoAdvance : true);
-                    if (tintUniforms) Tint(go, t.Uniform());
+                    if (tintUniforms && !kitLook) Tint(go, t.Uniform()); // the kit soldiers already wear their side's colours
                     if (player && !playerAutoAdvance)
                     {
                         float x = RedbaronMap.Lanes[lane][Mathf.Min(1, RedbaronMap.Lanes[lane].Length - 1)].x;

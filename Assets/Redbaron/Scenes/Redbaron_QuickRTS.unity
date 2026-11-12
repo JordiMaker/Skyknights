@@ -823,6 +823,21 @@ MonoBehaviour:
   soldierEntente: {fileID: 7656848350335012222, guid: e28bee9a300eb413bb50d9edd80482d9, type: 3}
   tintUniforms: 1
   soldierHeight: 1.8
+  kitSoldiersEntente:
+  - {fileID: 919132149155446097, guid: ac3a58dde074d4492b3155ce8ad7a5d8, type: 3}
+  - {fileID: 919132149155446097, guid: ac3a58dde074d4492b3155ce8ad7a5d8, type: 3}
+  - {fileID: 919132149155446097, guid: bddee3c4936b041789dbe9db95658bf9, type: 3}
+  - {fileID: 919132149155446097, guid: 9d25c9e0429be4afbb48fd318c4ea030, type: 3}
+  - {fileID: 919132149155446097, guid: c8f0be19b1ead4af4ba82af9d6ba765e, type: 3}
+  - {fileID: 919132149155446097, guid: d6f94936a785f431d8c4a7960d3fe168, type: 3}
+  kitSoldiersCentrales:
+  - {fileID: 919132149155446097, guid: c716b277955674a7dbbc5e3c3f978982, type: 3}
+  - {fileID: 919132149155446097, guid: c716b277955674a7dbbc5e3c3f978982, type: 3}
+  - {fileID: 919132149155446097, guid: ed6aff6eeca864d76b596b22c4d9a7d1, type: 3}
+  - {fileID: 919132149155446097, guid: 6f6222593b8c4439f8079a431d9c248c, type: 3}
+  - {fileID: 919132149155446097, guid: 0abe14cc4d2b64448a1fe6f6e43dfb7e, type: 3}
+  - {fileID: 919132149155446097, guid: b6fa1062f1364465e86a98401fdb17f8, type: 3}
+  kitSoldierMaterial: {fileID: 2100000, guid: 092fd76431b99478199e3ed7ae481b94, type: 2}
   waveEvery: 28
   minPerLane: 2
   maxPerLane: 4

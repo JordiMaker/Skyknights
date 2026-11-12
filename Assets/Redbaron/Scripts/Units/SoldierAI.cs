@@ -383,6 +383,14 @@ namespace Redbaron
             if (hit) target.Damage(1, gameObject);
         }
 
+        /// <summary>The soldier's model was replaced (SoldierModels) and has no Animator any more: it walks with AndarMech
+        /// and falls flat when it dies.</summary>
+        public void DropAnimator()
+        {
+            anim = null;
+            animParams.Clear();
+        }
+
         // ------------------------------------------------------------ Muerte y animación
         void Die()
         {
@@ -392,10 +400,36 @@ namespace Redbaron
             agent.enabled = false;
             foreach (var c in GetComponentsInChildren<Collider>()) c.enabled = false;
             if (anim != null && !string.IsNullOrEmpty(dieTrigger) && animParams.Contains(Animator.StringToHash(dieTrigger))) anim.SetTrigger(dieTrigger);
-            else transform.rotation = Quaternion.Euler(-90, transform.eulerAngles.y, 0);
+            else StartCoroutine(FallOver());
             Combat.Puff(transform.position + Vector3.up, new Color(0.54f, 0.5f, 0.42f, 0.6f), 0.8f, 1f, 0.3f);
             if (RedbaronGame.Instance != null) RedbaronGame.Instance.OnSoldierDied(this);
             Destroy(gameObject, 8f);
+        }
+
+        /// <summary>Without a death animation the soldier topples onto its back, faster as it goes (0.45 s). It rises by the
+        /// depth of its back (backpack included) so that it lies on the ground instead of sinking half into it.</summary>
+        System.Collections.IEnumerator FallOver()
+        {
+            float back = 0f;
+            foreach (var mf in GetComponentsInChildren<MeshFilter>())
+            {
+                if (mf.sharedMesh == null) continue;
+                Bounds b = mf.sharedMesh.bounds;
+                for (int i = 0; i < 8; i++)
+                {
+                    var corner = new Vector3((i & 1) == 0 ? b.min.x : b.max.x, (i & 2) == 0 ? b.min.y : b.max.y, (i & 4) == 0 ? b.min.z : b.max.z);
+                    back = Mathf.Min(back, Vector3.Dot(mf.transform.TransformPoint(corner) - transform.position, transform.forward));
+                }
+            }
+            Quaternion from = transform.rotation, to = Quaternion.Euler(-90, transform.eulerAngles.y, 0);
+            Vector3 start = transform.position, end = start + Vector3.up * -back;
+            for (float t = 0; t < 1f; t += Time.deltaTime / 0.45f)
+            {
+                float k = t * t;
+                transform.SetPositionAndRotation(Vector3.Lerp(start, end, k), Quaternion.Slerp(from, to, k));
+                yield return null;
+            }
+            transform.SetPositionAndRotation(end, to);
         }
 
         void UpdateAnimator()

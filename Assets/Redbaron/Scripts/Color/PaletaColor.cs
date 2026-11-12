@@ -192,6 +192,20 @@ namespace Redbaron
             return m;
         }
 
+        /// <summary>The colour a material takes in a theme: its zone's colour, or its own colour outside the zones
+        /// (or when the theme leaves that zone alone). Added for Skyknights: the infantry bakes it into vertex colours.</summary>
+        public static Color ColorFor(Material m, TemaDatos t)
+        {
+            if (m == null) return Color.gray;
+            Color own = Color.white;
+            foreach (int id in Props) if (m.HasProperty(id)) { own = m.GetColor(id); break; }
+            own.a = 1f;
+            if (t == null || !Mapa.TryGetValue(Limpia(m.name), out var z)) return own;
+            Color c = t.Zona(z.Key);
+            if (c.a <= 0f) return own;
+            return new Color(Mathf.Clamp01(c.r * z.Value), Mathf.Clamp01(c.g * z.Value), Mathf.Clamp01(c.b * z.Value), 1f);
+        }
+
         // Quita los sufijos que añaden Unity y los importadores: "Equipo (Instance)", "Equipo.001"…
         static string Limpia(string n)
         {

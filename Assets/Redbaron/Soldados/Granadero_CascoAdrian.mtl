@@ -1,0 +1,137 @@
+# Granadero_CascoAdrian · materiales
+newmtl HorizonteOscuro
+Kd 0.11128 0.17346 0.28879 # srgb 0.3686 0.4510 0.5686
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl Horizonte
+Kd 0.20836 0.29769 0.42586 # srgb 0.4902 0.5765 0.6784
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl Cuero
+Kd 0.10112 0.03849 0.01348 # srgb 0.3529 0.2275 0.1412
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 40
+d 1
+illum 2
+
+newmtl Laton
+Kd 0.47043 0.25496 0.03996 # srgb 0.7098 0.5373 0.2314
+Ka 0 0 0
+Ks 0.325 0.325 0.325
+Ns 116
+d 1
+illum 2
+
+newmtl Equipo
+Kd 0.02422 0.07592 0.25905 # srgb 0.1843 0.3098 0.5412
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 40
+d 1
+illum 2
+
+newmtl Piel
+Kd 0.82763 0.49363 0.29769 # srgb 0.9176 0.7255 0.5765
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 30
+d 1
+illum 2
+
+newmtl Negro
+Kd 0.00775 0.00659 0.00503 # srgb 0.1098 0.1020 0.0902
+Ka 0 0 0
+Ks 0.100 0.100 0.100
+Ns 60
+d 1
+illum 2
+
+newmtl Crema
+Kd 0.84339 0.79699 0.65232 # srgb 0.9255 0.9020 0.8235
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl Pelo
+Kd 0.06576 0.02899 0.01187 # srgb 0.2902 0.2000 0.1333
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl Mejilla
+Kd 0.75184 0.27587 0.19749 # srgb 0.8784 0.5569 0.4784
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl CascoAzul
+Kd 0.13321 0.19749 0.28445 # srgb 0.4000 0.4784 0.5647
+Ka 0 0 0
+Ks 0.175 0.175 0.175
+Ns 90
+d 1
+illum 2
+
+newmtl Madera
+Kd 0.19749 0.09155 0.03025 # srgb 0.4784 0.3373 0.2039
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 30
+d 1
+illum 2
+
+newmtl Hierro
+Kd 0.04298 0.03849 0.03289 # srgb 0.2392 0.2275 0.2118
+Ka 0 0 0
+Ks 0.225 0.225 0.225
+Ns 80
+d 1
+illum 2
+
+newmtl Lona
+Kd 0.67999 0.59901 0.38894 # srgb 0.8392 0.7922 0.6510
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 10
+d 1
+illum 2
+
+newmtl Acero
+Kd 0.16045 0.14799 0.12472 # srgb 0.4353 0.4196 0.3882
+Ka 0 0 0
+Ks 0.250 0.250 0.250
+Ns 100
+d 1
+illum 2
+
+newmtl Caqui
+Kd 0.20836 0.19749 0.07804 # srgb 0.4902 0.4784 0.3137
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+
+newmtl Oliva
+Kd 0.10871 0.14498 0.04454 # srgb 0.3647 0.4157 0.2431
+Ka 0 0 0
+Ks 0.000 0.000 0.000
+Ns 20
+d 1
+illum 2
+

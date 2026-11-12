@@ -21,6 +21,14 @@
 - Paint, metal, wood, canvas and stone have a grain texture, so the models no longer look like plastic.
 - The Central Powers' flags, HUD bars and menu cards are green now. The Entente keeps its blue.
 
+**Infantry**
+- The soldiers are the big-headed soldiers of the Redbaron colour kit: riflemen, grenadiers, machine gunners, flamethrower troops and sappers, picked at random. For now they all fight as riflemen.
+- The Entente wears the Adrian helmet and navy blue, and the Central Powers the steel helmet and green.
+- They march with the kit's walking animation. When killed, they topple onto their back in half a second and lie on the ground.
+
+**Fixes**
+- Smoke and fire effects no longer throw an error every frame after the scripts are recompiled in Play mode. That error filled the Editor log and left the effect stuck on screen.
+
 **Combat**
 - A collision no longer destroys a plane outright. This covers tree crowns, mountains, buildings, the rock wall and other planes. Each collision costs 2 of the 6 energy points and pushes the plane clear. For the next 1.5 s, further collisions do no damage. In a mid-air collision, both planes are pushed apart.
 - Every gun fires 20 % more slowly:

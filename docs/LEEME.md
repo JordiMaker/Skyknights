@@ -504,3 +504,14 @@ The settings are on AirWar → Anti-aircraft towers (model, spots, clearance) an
 One rule stays: everything in the air flies on one flight plane, so rounds and bursts never miss above or below.
 
 Some earlier sections describe the previous rules: the aim assist in "Flying your plane", the yellow bomb cross, planes going down on any collision, and red for the Central Powers. The sections above replace them.
+
+## Big-headed soldiers (added 2026-11-12)
+
+The infantry wears the big-headed soldiers of the colour kit. The models are in `Assets/Redbaron/Soldados`: five troop types, each with the Adrian helmet (Entente) and the steel helmet (Central Powers). The mortar team is left out, because it has no legs to march with.
+
+- **Choice:** WaveSpawner → Kit Soldiers Entente / Kit Soldiers Centrales lists the models, and each new soldier picks one at random. The rifleman is in the list twice, so a third of the soldiers are riflemen. For now every type fights as a rifleman. Empty lists bring back the Toon Soldiers look.
+- **How it is done:** the soldier prefabs are unchanged, so Quick RTS selection, the NavMesh agent and the collider still work. When a soldier spawns, SoldierModels removes the Toon Soldiers mesh, bones and Animator, and puts the kit model in their place, scaled to 1.8 m. It also gives Quick Outline the new meshes, so selected soldiers are still outlined.
+- **Colours and draw calls:** each model is baked once per side into vertex-coloured meshes (body and both legs) in its side's theme. The Entente gets navy blue and the Central Powers green. Every soldier of that model and side shares those meshes and one material, `Materials/Redbaron_Soldados.mat` (LowPolyVertexColor with GPU instancing on). A soldier therefore costs three draw calls instead of one per material. The kit's grain shader is not used on soldiers: at their size it does not show.
+- **Animation:** the kit's AndarMech swings the legs at walking pace (28° at the hip, 1.5 steps per second at full speed). With no Animator, a soldier that is killed topples onto its back in 0.45 s. It rises by the depth of its back and backpack, so it lies on the ground instead of sinking into it.
+- **Import:** the soldier OBJs have Read/Write on, because their meshes are baked at runtime. They got the same two fixes as the ships: `o` → `g` and MTL `Kd` converted to linear.
+- **Kit script change:** `PaletaColor.ColorFor` was added. It returns the colour a material takes in a theme.
