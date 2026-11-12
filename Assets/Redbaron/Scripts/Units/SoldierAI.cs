@@ -77,6 +77,10 @@ namespace Redbaron
         public float Length => lookSize.z;
         /// <summary>Counter for the tests: how often a soldier jumped clear of a grenade or bomb.</summary>
         public static int Evades;
+        /// <summary>Shots fired, and moves to a better tactical spot made after a shot, for the tests.</summary>
+        public static int Shots, Repositions, RepositionTries, LineMoves;
+        bool seekBetter; // set by a shot: look for a better spot before the next one
+        int noLos; bool losBlocked; // shots refused for want of a line of fire; after three, the unit moves to find one
         /// <summary>The player's attack order, if any.</summary>
         public Health ForcedTarget => forcedTarget;
         /// <summary>The order it is carrying out, in words (Spanish, for the screen).</summary>
@@ -687,6 +691,25 @@ namespace Redbaron
             if (IsVehicle) waitForEscort = EscortLagging();
             if (charge > 0 && Suppression > 0.7f) charge = 0; // a charge breaks down under heavy fire
             if (charge > 0) return;
+            // Stuck without a line of fire on its target: leave the cover and move a few metres towards it, then settle again.
+            if (losBlocked)
+            {
+                losBlocked = false;
+                if (tgt != null && tgt.Alive && CurrentState != State.Order)
+                {
+                    Vector3 towards = FlatDir(tgt.transform.position - transform.position).normalized;
+                    Vector3 to = transform.position + towards * (IsVehicle ? 10f : 7f);
+                    if (NavMesh.SamplePosition(to, out var lh, 4f, NavMesh.AllAreas))
+                    {
+                        ReleaseCover();
+                        spot = lh.position; evadeT = IsVehicle ? 6f : 3f;
+                        CurrentState = State.Evade;
+                        SetDest(spot, IsVehicle ? walkSpeed : runSpeed);
+                        LineMoves++;
+                        return;
+                    }
+                }
+            }
             if (CurrentState == State.Order) return; // primero llegar adonde mandó el jugador
 
             // Hold position: never moves, and fires at whatever its weapon reaches (Update fires from Hold).
@@ -769,9 +792,18 @@ namespace Redbaron
                 coverT = 0;
             }
             bool keep = cover != null && Flat(cover.transform.position - transform.position) < 18 && cover.ProtectionAgainst(spot, ep) < 0.7f;
-            if (keep) return;
             Vector3 center = hasOrderArea && !followsLane ? orderPoint : transform.position;
             float radius = hasOrderArea && !followsLane ? holdRadius : coverSearchRadius;
+            if (keep)
+            {
+                // After a shot: a clearly better spot nearby (closer to the enemy, a trench, higher ground) is worth the move.
+                if (!seekBetter) return;
+                seekBetter = false; RepositionTries++;
+                float current = Mathf.Max(0, Flat(ep - spot) - Flat(ep - transform.position)) * 1.5f + (cover.type == CoverType.Trinchera ? -2 : 0) - Mathf.Clamp(spot.y - ep.y, -3f, 3f);
+                if (PickCover(ep, false, center, radius, current - 2f)) Repositions++;
+                return;
+            }
+            seekBetter = false;
             if (!PickCover(ep, false, center, radius))
             {
                 ReleaseCover();
@@ -779,7 +811,8 @@ namespace Redbaron
             }
         }
 
-        bool PickCover(Vector3 enemyPos, bool forward, Vector3 center, float radius)
+        /// <summary>Takes the best free cover within radius of center against enemyPos; with mustBeat, only one scoring below it.</summary>
+        bool PickCover(Vector3 enemyPos, bool forward, Vector3 center, float radius, float mustBeat = float.MaxValue)
         {
             if (IsVehicle) return false;
             float dMe = Flat(enemyPos - transform.position);
@@ -799,7 +832,7 @@ namespace Redbaron
                          - Mathf.Clamp(s.y - enemyPos.y, -3f, 3f);
                 if (sc < bs) { bs = sc; best = c; bestSpot = s; }
             }
-            if (best == null) return false;
+            if (best == null || bs > mustBeat) return false;
             ReleaseCover();
             cover = best; cover.occupants++;
             spot = bestSpot; coverT = 0;
@@ -851,7 +884,14 @@ namespace Redbaron
             Vector3 eye = Muzzle();
             var ts = target.GetComponent<SoldierAI>();
             Vector3 at = ts != null ? ts.HitPoint : target.AimPoint;
-            if (weapon != WeaponKind.Grenade && !Combat.HasLineOfSight(eye, at, target.transform)) { cd = 0.5f; return; }
+            // No line of fire (terrain, a rock): wait, and after three tries move for one (Think). Grenades go over, charges are set by hand.
+            if (weapon != WeaponKind.Grenade && weapon != WeaponKind.Demolition && !Combat.HasLineOfSight(eye, at, target.transform))
+            {
+                cd = 0.5f;
+                if (++noLos >= 3) { noLos = 0; losBlocked = true; thinkT = 0; }
+                return;
+            }
+            noLos = 0;
 
             bool rifle = weapon == WeaponKind.Rifle && Type.weapon != WeaponKind.Rifle; // the rifle of a grenadier, flamethrower or sapper
             float cool = rifle ? UnitType.Rifleman.cooldown : Type.cooldown;
@@ -859,6 +899,8 @@ namespace Redbaron
             float d = Vector3.Distance(eye, at);
             float p = HitChance(rifle ? UnitType.Rifleman.hit * 0.9f : Type.hit, d, ts, weapon);
             bool hit = Random.value < p;
+            Shots++;
+            if (!IsVehicle) seekBetter = true; // after each shot: look for a better position until the next
 
             switch (weapon)
             {
