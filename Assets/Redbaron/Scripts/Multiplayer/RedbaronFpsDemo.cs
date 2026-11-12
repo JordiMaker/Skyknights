@@ -12,6 +12,9 @@ namespace Redbaron
     /// - "Jugar solo": the template's offline mode, a local player with its Avatar switched off, at the first spawn point;
     /// - LAN: create a room, look for rooms on the LAN, or connect straight to an address (the SDK's LAN sample);
     /// - Escape opens the template's menu and frees the cursor.
+    /// The battle goes on around the players: WaveSpawner sends a wave from each base every minute, and the AI of both
+    /// sides advances on the enemy command post, fighting whatever it meets, players included (FpsBridges).
+    /// The player's side is the half of the map it spawned on; its own side's AI leaves it alone.
     /// </summary>
     public class RedbaronFpsDemo : MonoBehaviour
     {
@@ -34,6 +37,21 @@ namespace Redbaron
             if (multiplayer == null) multiplayer = FindAnyObjectByType<MultiplayerManager>();
             if (spawnPoints == null) { var sp = GameObject.Find("PuntosAparicion"); if (sp != null) spawnPoints = sp.transform; }
             Cursor.lockState = CursorLockMode.None; Cursor.visible = true;
+        }
+
+        float bridgeT;
+        /// <summary>Every half second: the FPS players get a Redbaron health the AI can shoot, and every AI unit and building
+        /// an FPS health the players' bullets can hit (FpsBridges).</summary>
+        void Update()
+        {
+            bridgeT -= Time.deltaTime;
+            if (bridgeT > 0) return;
+            bridgeT = 0.5f;
+            foreach (var p in FindObjectsByType<PlayerController>(FindObjectsSortMode.None))
+                if (p.GetComponent<FpsPlayerBridge>() == null) p.gameObject.AddComponent<FpsPlayerBridge>();
+            foreach (var h in Health.All)
+                if (h != null && (h.IsStructure || h.GetComponent<SoldierAI>() != null) && h.GetComponent<FpsTargetBridge>() == null)
+                    h.gameObject.AddComponent<FpsTargetBridge>();
         }
 
         public bool Online => multiplayer != null && multiplayer.IsConnected;
@@ -97,13 +115,39 @@ namespace Redbaron
             button = new GUIStyle(GUI.skin.button) { fontSize = 12 };
         }
 
+        Texture2D white;
+
+        /// <summary>Top right, always: the two command posts, the troops on the field and the battle's last event.</summary>
+        void Hud(float W)
+        {
+            if (white == null) white = Texture2D.whiteTexture;
+            GUILayout.BeginArea(new Rect(W - 272, 12, 260, 92), box);
+            foreach (var t in new[] { Team.Centrales, Team.Entente })
+            {
+                var post = CommandPost.Of(t);
+                int n = 0; foreach (var s in SoldierAI.All) if (s.Alive && s.team == t) n++;
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"{t.Name()} · {n} tropas", small, GUILayout.Width(150));
+                Rect r = GUILayoutUtility.GetRect(90, 12); r.y += 4; r.height = 6;
+                GUI.color = new Color(1, 1, 1, 0.15f); GUI.DrawTexture(r, white);
+                float f = post != null ? post.Health.hp / post.Health.maxHp : 0f;
+                GUI.color = t.FlagColor(); GUI.DrawTexture(new Rect(r.x, r.y, r.width * f, r.height), white);
+                GUI.color = Color.white;
+                GUILayout.EndHorizontal();
+            }
+            var g = RedbaronGame.Instance;
+            if (g != null) GUILayout.Label(g.lastEvent, small);
+            GUILayout.EndArea();
+        }
+
         void OnGUI()
         {
             if (!showPanel) return;
-            if (Offline && Cursor.lockState == CursorLockMode.Locked) return; // playing: the panel would only get in the way
             Styles();
             float scale = Mathf.Max(1f, Screen.height / 720f);
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
+            Hud(Screen.width / scale);
+            if (Offline && Cursor.lockState == CursorLockMode.Locked) { GUI.matrix = Matrix4x4.identity; return; } // playing: the panel would only get in the way
             GUILayout.BeginArea(new Rect(12, 12, 330, 250), box);
             GUILayout.Label("REDBARON · DEMO MULTIJUGADOR (FPS)", label);
             string state = multiplayer == null ? "sin objeto Multiplayer"

@@ -10,6 +10,9 @@ namespace Redbaron
     public class Health : MonoBehaviour
     {
         public static readonly List<Health> All = new List<Health>();
+        /// <summary>Fighters of other systems (the FPS players of the multiplayer demo) that the AI hunts like enemy soldiers.
+        /// Their bridge registers them here while they are alive and on the field.</summary>
+        public static readonly List<Health> Fighters = new List<Health>();
 
         public Team team;
         public TargetKind kind = TargetKind.Soldier;

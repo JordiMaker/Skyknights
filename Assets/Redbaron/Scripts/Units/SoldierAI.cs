@@ -518,6 +518,15 @@ namespace Redbaron
                 float s = d / Mathf.Max(0.05f, Combat.Factor(how, o.Health.kind)) * Priority(o, d);
                 if (s < bs) { bs = s; best = o.Health; dist = d; }
             }
+            // Fighters of other systems (the FPS players): soldiers in the open, without a squad or cover.
+            foreach (var h in Health.Fighters)
+            {
+                if (h == null || h.team == team || !h.Alive || !h.gameObject.activeInHierarchy) continue;
+                float d = Vector3.Distance(h.transform.position, transform.position);
+                if (d > Sight) continue;
+                float s = d / Mathf.Max(0.05f, Combat.Factor(how, h.kind));
+                if (s < bs) { bs = s; best = h; dist = d; }
+            }
             if (best != null && Type.weapon == WeaponKind.Cannon)
             {
                 var building = NearestStructure(BuildingSight, out float db);

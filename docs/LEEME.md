@@ -713,4 +713,11 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
 
 **The demo panel (RedbaronFpsDemo).** Top left: the connection state, and buttons for **Jugar solo** (the template's offline mode: the Player prefab with its Avatar component off and `PlayerController.Avatar` cleared, at a random spawn point; the Multiplayer object is disabled), **Crear sala**, **Buscar en LAN** and **Conectar a IP** (`MultiplayerManager.CreateRoom`, `JoinLan`, `DirectConnect`). While playing the cursor is locked and the panel hides; Escape opens the template's menu. The Multiplayer object spawns one avatar per player who joins a room, at the spawn points in turn.
 
+**The battle around the players.** WaveSpawner is on in this scene with a wave every 60 s from each base, and both sides' AI advances on the enemy command post as in the battle scene (RedbaronGame restarts the battle when a post falls). The Quick RTS managers stay active because the spawned units register with them, with SelectorRTS, ShortcutsSelectable and RTSCameraController off and the Quick RTS camera disabled.
+
+**Two damage systems, joined (FpsBridges).** The AI fights with Redbaron.Health; the template's players and bullets use AlterunaFPS.Health. Ten FPS points are one Redbaron point.
+- `FpsPlayerBridge`, on each player: a Redbaron.Health the AI can see (registered in `Health.Fighters`, which SoldierAI.PickTarget reads as soldiers in the open) and shoot; every hit is passed on to the FPS health, and the FPS health is mirrored back each frame, so other players' bullets and respawns count too. The player's side is the half of the map it is standing on when it (re)spawns: its own side's AI leaves it alone.
+- `FpsTargetBridge`, on every AI unit and building: an FPS health the pistol's raycast can hit; what it loses is passed to the Redbaron health as bullet damage, so armour applies (a tenth to vehicles).
+- RedbaronFpsDemo adds both bridges every half second to whatever is missing one.
+
 **Controls.** WASD moves, the mouse aims, left click fires, right click zooms, R reloads, Space jumps, Shift sprints, V switches first and third person, Escape the menu.
