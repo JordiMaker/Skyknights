@@ -16,6 +16,12 @@ namespace Redbaron
         [Header("Construcción")]
         public bool buildOnAwake = true;
         public bool bakeNavMeshOnAwake = true;
+        [Tooltip("Vehicles walk a second NavMesh baked for the widest of them: half its width plus a margin (m), its height, the slope it climbs (degrees) and the step it takes (m).")]
+        public float vehicleAgentRadius = 2.7f, vehicleAgentHeight = 4.6f, vehicleAgentSlope = 32f, vehicleAgentClimb = 0.9f;
+        [Tooltip("Width of the bridge decks (m): wide enough for the widest vehicle with its NavMesh margin.")]
+        public float bridgeWidth = 9f;
+        /// <summary>The NavMesh agent type vehicles use (0 until the vehicle NavMesh is baked).</summary>
+        public static int VehicleAgentTypeID { get; private set; }
         public int seed = 1916;
         [Tooltip("Capa del suelo. Pon la que use Quick RTS para hacer clic en el terreno (por ejemplo 'Ground').")]
         public int groundLayer = 0;
@@ -676,12 +682,12 @@ namespace Redbaron
             foreach (bool south in new[] { false, true })
             {
                 // Puente de piedra (línea centro) y de madera (línea este)
-                AddBridge(acc, 50, south ? RedbaronMap.MirrorZ(104.6f) : 104.6f, 5.5f, 16 * K, Stone, true);
-                AddBridge(acc, 85, south ? RedbaronMap.MirrorZ(104f) : 104f, 3.6f, 15 * K, Plank, false);
-                // Piedras del vado (línea oeste)
-                for (int i = 0; i < 7; i++)
+                AddBridge(acc, 50, south ? RedbaronMap.MirrorZ(104.6f) : 104.6f, bridgeWidth, 16 * K, Stone, true);
+                AddBridge(acc, 85, south ? RedbaronMap.MirrorZ(104f) : 104f, bridgeWidth, 15 * K, Plank, false);
+                // Piedras del vado (línea oeste): two rows, so the ford reads as wide as the vehicles need
+                for (int i = 0; i < 14; i++)
                 {
-                    float Zs = 99 + i * 1.8f, X = 15 + (i % 2 == 1 ? 1.2f : -1.2f);
+                    float Zs = 99 + (i % 7) * 1.8f, X = 15 + (i % 2 == 1 ? 1.2f : -1.2f) + (i < 7 ? -3.2f : 3.2f);
                     Vector3 p = RedbaronMap.ToWorld(X, south ? RedbaronMap.MirrorZ(Zs) : Zs, -0.85f);
                     acc.AddCylinder(p - Vector3.up * 0.25f, p + Vector3.up * 0.25f, 0.85f, 0.7f, 6, Jitter(Stone, 0.06f));
                 }
@@ -1051,11 +1057,48 @@ namespace Redbaron
             var data = NavMeshBuilder.BuildNavMeshData(settings, sources, bounds, Vector3.zero, Quaternion.identity);
             if (navInstance.valid) navInstance.Remove();
             navInstance = NavMesh.AddNavMeshData(data);
+
+            // A second NavMesh for the vehicles: tanks and mechs only go where their width, slope and step allow
+            // (bridges, fords, mountain passes and the trench crossings are sized for them: RedbaronMap.LaneClear, bridgeWidth).
+            var vs = VehicleAgentTypeID != 0 ? SettingsOf(VehicleAgentTypeID) : NavMesh.CreateSettings();
+            VehicleAgentTypeID = vs.agentTypeID;
+            vs.agentRadius = vehicleAgentRadius;
+            vs.agentHeight = vehicleAgentHeight;
+            vs.agentSlope = vehicleAgentSlope;
+            vs.agentClimb = vehicleAgentClimb;
+            var vdata = NavMeshBuilder.BuildNavMeshData(vs, sources, bounds, Vector3.zero, Quaternion.identity);
+            if (vehicleNavInstance.valid) vehicleNavInstance.Remove();
+            vehicleNavInstance = NavMesh.AddNavMeshData(vdata);
+        }
+
+        NavMeshDataInstance vehicleNavInstance;
+
+        static NavMeshBuildSettings SettingsOf(int agentTypeID)
+        {
+            for (int i = 0; i < NavMesh.GetSettingsCount(); i++)
+            {
+                var s = NavMesh.GetSettingsByIndex(i);
+                if (s.agentTypeID == agentTypeID) return s;
+            }
+            return NavMesh.CreateSettings();
+        }
+
+        /// <summary>Is there a path for this agent type between a and b? For the tests (unity command eval).</summary>
+        public static bool PathExists(Vector3 a, Vector3 b, int agentTypeID, out float length)
+        {
+            length = 0;
+            var filter = new NavMeshQueryFilter { agentTypeID = agentTypeID, areaMask = NavMesh.AllAreas };
+            var path = new NavMeshPath();
+            if (!NavMesh.SamplePosition(a, out var ha, 8f, filter) || !NavMesh.SamplePosition(b, out var hb, 8f, filter)) return false;
+            if (!NavMesh.CalculatePath(ha.position, hb.position, filter, path) || path.status != NavMeshPathStatus.PathComplete) return false;
+            for (int i = 1; i < path.corners.Length; i++) length += Vector3.Distance(path.corners[i - 1], path.corners[i]);
+            return true;
         }
 
         void OnDestroy()
         {
             if (navInstance.valid) navInstance.Remove();
+            if (vehicleNavInstance.valid) vehicleNavInstance.Remove();
         }
     }
 }

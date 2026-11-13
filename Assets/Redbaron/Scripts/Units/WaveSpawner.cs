@@ -156,6 +156,9 @@ namespace Redbaron
             ai.SetLook(look);
 
             var agent = RedbaronMapBuilder.GetOrAdd<NavMeshAgent>(go);
+            if (vehicle && RedbaronMapBuilder.VehicleAgentTypeID != 0) agent.agentTypeID = RedbaronMapBuilder.VehicleAgentTypeID; // the vehicles' own NavMesh
+            var filter = new NavMeshQueryFilter { agentTypeID = agent.agentTypeID, areaMask = NavMesh.AllAreas };
+            if (NavMesh.SamplePosition(p, out var onMesh, 12f, filter)) p = onMesh.position;
             agent.Warp(p);
             if (go.GetComponent<Collider>() == null)
             {

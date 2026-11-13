@@ -474,7 +474,9 @@ namespace Redbaron
             agent.updateRotation = true;
             if (!float.IsNaN(lastAsked.x) && (p - lastAsked).sqrMagnitude < 0.25f && agent.hasPath) return;
             lastAsked = p;
-            if (NavMesh.SamplePosition(p, out var hit, 3f, NavMesh.AllAreas)) p = hit.position;
+            // On this unit's own NavMesh (vehicles have theirs), reaching further for a vehicle sent near a wall or a trench.
+            var filter = new NavMeshQueryFilter { agentTypeID = agent.agentTypeID, areaMask = NavMesh.AllAreas };
+            if (NavMesh.SamplePosition(p, out var hit, IsVehicle ? 8f : 3f, filter)) p = hit.position;
             if (agent.SetDestination(p)) ownPath = true; // read back in Update when the path is ready
         }
 

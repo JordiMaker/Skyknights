@@ -62,6 +62,11 @@
   - nobody charges with a squad that has lost a quarter of its men.
 - Your squads holding a position for you never fall back on their own.
 
+**Terrain and bridges sized for every unit**
+- Vehicles walk their own NavMesh, baked for the widest of them (radius 2.7 m, slope 32°, step 0.9 m), so tanks and mechs only take routes their size allows. Infantry keeps its 0.4 m mesh.
+- Every lane is passable by every unit: the bridges are 9 m wide (were 5.5 and 3.6), the ford has two rows of stepping stones, the mountain passes are wider, and the trenches stop 5.5 m short of each lane with a ramp (were 3.6 m), which is also how far the ground is flattened along the lanes.
+- Checked with a path query on both meshes for all six lane runs, and by walking a unit of each of the 11 types down each lane.
+
 **Lane orders: the flags**
 - Each of your three lanes carries an order, shown as a big flag in your colour with the lane's number on it. All three start at the enemy command post: the default order, advance and destroy the enemy position.
 - Click the ground with nothing selected (RTS test screen) and the flag of the lane under the cursor moves there. A flag away from the post is an intermediate objective: the lane's troops go there, fighting whatever comes within reach on the way, then spread out over the stretch around it (±14 m across, ±16 m along) and take its tactical spots, each at its own place.

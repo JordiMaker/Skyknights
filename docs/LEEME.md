@@ -695,6 +695,19 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
 
 **About Low Poly Shooter Pack - Free Sample (Infima Games).** It was checked for this scene and not imported. It has no enemy AI: it is a first-person player controller with weapons, pop-up targets and explosive barrels. It needs the new Input System and Post Processing, and it ships its own ProjectSettings and Packages/manifest.json.
 
+## Terrain and bridges sized for every unit (added 2026-11-13)
+
+Every lane can be walked by every unit type, infantry and vehicles alike, and the map is built so.
+
+**Two NavMeshes (RedbaronMapBuilder.BakeNavMesh).** The infantry mesh is baked as before (radius 0.4 m, height 1.8 m, slope 40°, step 0.45 m). A second mesh for the vehicles is baked from the same geometry with the builder's **Vehicle Agent Radius / Height / Slope / Climb** (2.7 m, 4.6 m, 32°, 0.9 m: half the width of the heavy tank plus a margin). `NavMesh.CreateSettings` gives it its own agent type, kept in `RedbaronMapBuilder.VehicleAgentTypeID`; WaveSpawner puts every vehicle's NavMeshAgent on it, and SoldierAI samples destinations on the unit's own mesh (8 m of reach for a vehicle). So a tank never plans a route through a gap, a trench or a slope its size cannot take.
+
+**What the map does for them (RedbaronMap, RedbaronMapBuilder).**
+- `RedbaronMap.LaneClear` (5.5 m) is the half-width kept clear along every lane: the ground is flattened that far from the lane line, and the trenches stop there with a 1.5 m ramp (before: 3.6 m and 1 m).
+- The bridges are **Bridge Width** wide (9 m; before 5.5 m for the stone bridge and 3.6 m for the plank one), and the lane heights over them (`WalkHeight`) cover 4 design units each side.
+- The ford of the west lane has two rows of stepping stones, and the three mountain passes are wider (Gaussian width 8 instead of 6.5 design units).
+
+**Checking it.** `RedbaronMapBuilder.PathExists(a, b, agentTypeID, out length)` asks each mesh for a complete path. The test (scratchpad `lanes_test.cs`) runs it for the six lane runs on both meshes, then spawns one unit of each of the 11 types on each lane and watches them reach the enemy base.
+
 ## Lane orders: the flags (added 2026-11-13)
 
 `Scripts/Game/LaneFlags.cs` holds the player's orders, one per lane, as three big flags in the side's colour with the lane's number on the cloth. RedbaronGame creates the object (**Banderas**) in every scene; WaveSpawner's Player Team says whose lanes they are.

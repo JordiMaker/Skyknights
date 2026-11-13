@@ -35,6 +35,8 @@ namespace Redbaron
     {
         public const float DesignW = 100f, DesignL = 300f;
         public static readonly float K = Mathf.Sqrt(1.5f);
+        /// <summary>Half-width kept clear of trenches and flattened along every lane (m), for the widest vehicle and its NavMesh margin.</summary>
+        public const float LaneClear = 5.5f;
         public static float WorldW => DesignW * K;
         public static float WorldL => DesignL * K;
         public const float WallHeight = 28f;
@@ -122,7 +124,7 @@ namespace Redbaron
             float Zm = Z <= 150 ? Z : 300 - Z;
             float ld = LaneDist(X, Zm);
             float baseFlat = G(Hyp((X - 50) * 0.7f, Zm - 9), 9);
-            float lf = Mathf.Max(G(ld, 3.6f), Mathf.Max(baseFlat, OnAirfield(X, Zm, 2.5f) ? 1f : 0f));
+            float lf = Mathf.Max(G(ld, LaneClear / K), Mathf.Max(baseFlat, OnAirfield(X, Zm, 2.5f) ? 1f : 0f)); // the lane and its shoulders are flat
             float h = 0.35f * Mathf.Sin(X * 0.37f + Zm * 0.11f) + 0.25f * Mathf.Sin(X * 0.13f - Zm * 0.29f + 2) + 0.2f * Mathf.Sin(Zm * 0.53f + X * 0.07f);
             h += 1.3f * G(Hyp(X - 30, Zm - 47), 9) + 0.9f * G(Hyp(X - 66, Zm - 30), 7);
             float m = 0;
@@ -131,7 +133,7 @@ namespace Redbaron
                 float t = (Zm - 56) / 38f;
                 float s = Mathf.Pow(Mathf.Sin(Mathf.PI * t), 1.3f);
                 float peaks = 9 + 5 * Mathf.Sin(X * 0.23f + 1.3f) + 3 * Mathf.Sin(X * 0.61f + 0.4f);
-                float pass = Mathf.Max(G(X - 16, 6.5f), Mathf.Max(G(X - 50, 6.5f), G(X - 85, 6.5f)));
+                float pass = Mathf.Max(G(X - 16, 8f), Mathf.Max(G(X - 50, 8f), G(X - 85, 8f))); // the passes take a tank
                 m = s * peaks * (1 - pass * 0.95f);
             }
             h += m;
@@ -155,7 +157,7 @@ namespace Redbaron
             float h0 = h;
             float dT = 1e9f;
             foreach (var b in TrenchLines) dT = Mathf.Min(dT, Mathf.Abs(Zm - TrenchZ(b, X)) * 0.842f * K);
-            float laneCut = Mathf.Clamp01((ld * K - 3.6f) / 1.0f);
+            float laneCut = Mathf.Clamp01((ld * K - LaneClear) / 1.5f); // no trench across a lane, with a ramp to it
             float trd = (dT < 2.3f ? 1f : dT < 3.6f ? (3.6f - dT) / 1.3f : 0f) * laneCut;
             h -= TrenchDepth * trd;
             return new MapSample { h = h, h0 = h0, laneDist = ld, trench = trd, mountain = m, wet = wet, zm = Zm };
@@ -166,7 +168,7 @@ namespace Redbaron
         {
             float Zm = Z <= 150 ? Z : 300 - Z;
             float y = Height(X, Z);
-            if (Zm > 96 && Zm < 113 && (Mathf.Abs(X - 50) < 3f || Mathf.Abs(X - 85) < 2f)) y = Mathf.Max(y, 0.45f);
+            if (Zm > 96 && Zm < 113 && (Mathf.Abs(X - 50) < 4f || Mathf.Abs(X - 85) < 4f)) y = Mathf.Max(y, 0.45f);
             return y;
         }
 
