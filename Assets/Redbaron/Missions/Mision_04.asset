@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: acfaae70c6fa74393a177d827ee7b433, type: 3}
+  m_Name: Mision_04
+  m_EditorClassIdentifier: Assembly-CSharp::Redbaron.MissionDefinition
+  title: Tierra de nadie
+  setting: "Frente de Flandes \xB7 invierno de 1917"
+  briefing: "Trincheras de verdad, alambradas, cr\xE1teres encharcados y los restos de la \xFAltima ofensiva: tanques reventados y un zepel\xEDn ca\xEDdo en mitad de la tierra de nadie. Las bater\xEDas de artiller\xEDa cubren la retaguardia y los nidos de ametralladora guardan cada carril."
+  objective: Destruye el puesto de mando enemigo.
+  scenario: Frente de Flandes
+  sceneName: Redbaron_WWI

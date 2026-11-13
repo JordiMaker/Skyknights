@@ -865,7 +865,7 @@ namespace Redbaron
         float EyeHeight()
         {
             if (IsVehicle) return lookSize.y * 0.6f;
-            if (CurrentState == State.InCover && cover != null && cover.type == CoverType.Trinchera) return 1.55f;
+            if (CurrentState == State.InCover && cover != null && cover.type == CoverType.Trinchera) return RedbaronMap.TrenchEye; // over the parapet
             return CurrentState == State.InCover || CurrentState == State.Hold ? 1.15f : 1.5f;
         }
 

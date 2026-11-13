@@ -120,15 +120,15 @@ namespace Redbaron.EditorTools
         static MissionDefinition[] WriteMissions()
         {
             Folder(MissionsDir);
-            MissionDefinition M(string file, string title, string setting, string briefing)
+            MissionDefinition M(string file, string title, string setting, string briefing, string scenario = "Frente en diez franjas", string scene = "Redbaron_QuickRTS")
             {
                 string path = MissionsDir + "/" + file + ".asset";
                 var m = AssetDatabase.LoadAssetAtPath<MissionDefinition>(path);
                 if (m == null) { m = ScriptableObject.CreateInstance<MissionDefinition>(); AssetDatabase.CreateAsset(m, path); }
                 m.title = title; m.setting = setting; m.briefing = briefing;
                 m.objective = "Destruye el puesto de mando enemigo.";
-                m.scenario = "Frente en diez franjas";
-                m.sceneName = "Redbaron_QuickRTS";
+                m.scenario = scenario;
+                m.sceneName = scene;
                 EditorUtility.SetDirty(m);
                 return m;
             }
@@ -140,6 +140,10 @@ namespace Redbaron.EditorTools
                   "El mando prepara una gran ofensiva. Mantén el cielo libre de cazas enemigos para que la infantería pueda cruzar la tierra de nadie."),
                 M("Mision_03", "Última luz", "Sector de las diez franjas · otoño de 1918",
                   "Tras meses de combate, las dos líneas están agotadas. Un último empujón puede decidir el sector: apoya el asalto final."),
+                // The WWI map (Redbaron_WWI): the same front dressed with the POLYGON War Map pack.
+                M("Mision_04", "Tierra de nadie", "Frente de Flandes · invierno de 1917",
+                  "Trincheras de verdad, alambradas, cráteres encharcados y los restos de la última ofensiva: tanques reventados y un zepelín caído en mitad de la tierra de nadie. Las baterías de artillería cubren la retaguardia y los nidos de ametralladora guardan cada carril.",
+                  "Frente de Flandes", "Redbaron_WWI"),
             };
         }
 

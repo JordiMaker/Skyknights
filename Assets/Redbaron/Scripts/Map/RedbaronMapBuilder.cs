@@ -80,9 +80,16 @@ namespace Redbaron
         public GameObject bunkerPrefab;
         public GameObject commandPostPrefab;
 
+        [Header("Palette")]
+        [Tooltip("Design Z (from each base) where the grass starts giving way to the churned mud of no man's land, and where it is all mud.")]
+        public float mudFromZ = 106f, mudFullZ = 120f;
+
         public Transform Root { get; private set; }
         public GameObject Ground { get; private set; }
         public static RedbaronMapBuilder Instance { get; private set; }
+        /// <summary>Alternative set dressing on the same object (the WWI map built from Synty's POLYGON War Map): it replaces
+        /// trenches, wire, bases and adds its own props. Null = the classic low-poly map.</summary>
+        public MapDressing Dressing { get; private set; }
 
         Mulberry32 rng;
         readonly List<Vector2> treesN = new List<Vector2>();
@@ -118,6 +125,9 @@ namespace Redbaron
             Root.SetParent(transform, false);
             rng = new Mulberry32((uint)seed);
             treesN.Clear(); groves.Clear();
+            Dressing = GetComponent<MapDressing>();
+            if (Dressing != null && Dressing.enabled) Dressing.Configure(this);
+            else { Dressing = null; RedbaronMap.ResetTrenchProfile(); }
             if (vertexColorMaterial == null)
             {
                 var sh = Shader.Find("Redbaron/LowPolyVertexColor");
@@ -138,9 +148,10 @@ namespace Redbaron
             AddCraterAndTrenchCovers();
             BuildSectionMarkers();
             BuildDecor();
+            if (Dressing != null) Dressing.Dress(this);
         }
 
-        Transform Group(string name)
+        public Transform Group(string name)
         {
             var g = new GameObject(name).transform;
             g.SetParent(Root, false);
@@ -252,7 +263,7 @@ namespace Redbaron
             float n = Mathf.Clamp01(n1 * 0.75f + n2 * 0.25f);
             Color grass = Color.Lerp(Color.Lerp(Grass3, Grass1, SStep(0.2f, 0.55f, n)), Grass4, SStep(0.55f, 0.85f, n));
             // No man's land: churned mud with a few surviving grass patches
-            float mud = SStep(106f, 120f, s.zm);
+            float mud = SStep(mudFromZ, mudFullZ, s.zm);
             Color mudCol = Color.Lerp(Color.Lerp(Mud2, Mud3, n2), Mud1, SStep(0.4f, 0.7f, n1) * 0.6f);
             mudCol = Color.Lerp(mudCol, Grass3, SStep(0.66f, 0.78f, n1) * 0.55f);
             Color col = Color.Lerp(grass, mudCol, mud);
@@ -274,7 +285,7 @@ namespace Redbaron
         }
 
         // ------------------------------------------------------------------ Set dressing
-        static void StripColliders(GameObject go)
+        public static void StripColliders(GameObject go)
         {
             foreach (var c in go.GetComponentsInChildren<Collider>())
             {
@@ -295,7 +306,7 @@ namespace Redbaron
             go.GetComponent<MeshRenderer>().shadowCastingMode = ShadowCastingMode.Off;
         }
 
-        static GameObject Pick(GameObject[] pool, Mulberry32 r) => pool[Mathf.FloorToInt(r.Next() * pool.Length) % pool.Length];
+        public static GameObject Pick(GameObject[] pool, Mulberry32 r) => pool[Mathf.FloorToInt(r.Next() * pool.Length) % pool.Length];
 
         /// <summary>Grass, mountain rocks and base props. Uses its own random stream, so the battle map itself does not change.</summary>
         void BuildDecor()
@@ -314,7 +325,7 @@ namespace Redbaron
                     Vector2 d = RedbaronMap.ToDesign(new Vector3(x, 0, z));
                     var s = RedbaronMap.Sample(d.x, d.y);
                     if (s.wet || s.trench > 0.02f || s.laneDist < 2.8f || s.mountain > 5f || s.h < -0.6f || RedbaronMap.OnAirfield(d.x, s.zm, 1.5f)) continue;
-                    if (s.zm > 110 && r.Next() < 0.8f) continue;
+                    if (s.zm > mudFromZ + 4f && r.Next() < 0.8f) continue;
                     var go = Instantiate(Pick(groundCoverPrefabs, r), new Vector3(x, s.h - 0.04f, z), Quaternion.Euler(0, r.Next() * 360f, 0), g);
                     go.transform.localScale *= r.Range(groundCoverScale.x, groundCoverScale.y);
                     StripColliders(go);
@@ -337,6 +348,7 @@ namespace Redbaron
                     FitHeight(go, hgt);
                     go.transform.position -= Vector3.up * hgt * 0.3f;
                     if (go.GetComponentInChildren<Collider>() == null) AddBoxColliders(go, 0.8f);
+                    else PhoneSafeColliders(go);
                     placed++;
                 }
             }
@@ -593,7 +605,7 @@ namespace Redbaron
             return go;
         }
 
-        static Bounds RenderBounds(GameObject go)
+        public static Bounds RenderBounds(GameObject go)
         {
             var rs = go.GetComponentsInChildren<Renderer>();
             if (rs.Length == 0) return new Bounds(go.transform.position, Vector3.zero);
@@ -602,9 +614,23 @@ namespace Redbaron
             return b;
         }
 
+        /// <summary>Replaces every mesh collider whose mesh is not Read/Write enabled by a box of the same bounds: the runtime
+        /// NavMesh bake cannot read such meshes in a phone build. Prefabs with primitive or readable colliders are left alone.</summary>
+        public static void PhoneSafeColliders(GameObject go)
+        {
+            foreach (var mc in go.GetComponentsInChildren<MeshCollider>())
+            {
+                if (mc.sharedMesh == null || mc.sharedMesh.isReadable) continue;
+                var bc = mc.gameObject.AddComponent<BoxCollider>();
+                bc.center = mc.sharedMesh.bounds.center; bc.size = mc.sharedMesh.bounds.size;
+                mc.enabled = false;
+                if (Application.isPlaying) Destroy(mc); else DestroyImmediate(mc);
+            }
+        }
+
         /// <summary>A box collider fitted to each mesh of a model, narrowed on x and z. Mesh colliders cannot be built
         /// at runtime in a phone build from models that are not Read/Write enabled, but box colliders always can.</summary>
-        static void AddBoxColliders(GameObject go, float narrow)
+        public static void AddBoxColliders(GameObject go, float narrow)
         {
             foreach (var mf in go.GetComponentsInChildren<MeshFilter>())
             {
@@ -629,6 +655,7 @@ namespace Redbaron
             var floor = new MeshAccumulator();
             var walls = new MeshAccumulator();
             var covers = Group("Coberturas_Trinchera");
+            if (Dressing != null && Dressing.BuildTrenches(this, covers)) return; // the terrain cut stays; the dressing lines it
             float TW = RedbaronMap.TrenchWidth, TH = RedbaronMap.TrenchDepth, K = RedbaronMap.K;
             foreach (float bz in RedbaronMap.TrenchLines)
                 for (float X = 0; X < 99.99f; X += 2.5f)
@@ -740,6 +767,7 @@ namespace Redbaron
                     hh.team = t; hh.kind = TargetKind.Hangar; hh.maxHp = hh.hp = 40; hh.aimHeight = 2f;
                     GetOrAdd<Hangar>(hgo);
                 }
+                if (Dressing != null) Dressing.DressAirfield(this, t, g);
                 float Zs = RedbaronMap.ForTeam(t, rw.yMin - 1.5f);
                 Vector3 ws = RedbaronMap.ToWorld(rw.xMin - 2, Zs);
                 acc.AddBox(ws + Vector3.up * 2.5f, new Vector3(0.15f, 5, 0.15f), Pole);
@@ -760,8 +788,9 @@ namespace Redbaron
             {
                 // Puesto de mando
                 Vector3 p = RedbaronMap.ToWorld(RedbaronMap.CommandPost.x, RedbaronMap.ForTeam(t, RedbaronMap.CommandPost.y));
-                GameObject post;
-                if (commandPostPrefab != null) post = Instantiate(commandPostPrefab, p, Quaternion.identity, g);
+                GameObject post = Dressing != null ? Dressing.BuildCommandPost(this, t, g, p) : null;
+                if (post != null) { }
+                else if (commandPostPrefab != null) post = Instantiate(commandPostPrefab, p, Quaternion.identity, g);
                 else
                 {
                     var acc = new MeshAccumulator();
@@ -780,8 +809,9 @@ namespace Redbaron
                 foreach (var b in RedbaronMap.Bunkers)
                 {
                     Vector3 bp = RedbaronMap.ToWorld(b.x, RedbaronMap.ForTeam(t, b.y));
-                    GameObject bunker;
-                    if (bunkerPrefab != null) bunker = Instantiate(bunkerPrefab, bp, Quaternion.identity, g);
+                    GameObject bunker = Dressing != null ? Dressing.BuildBunker(this, t, g, bp) : null;
+                    if (bunker != null) { }
+                    else if (bunkerPrefab != null) bunker = Instantiate(bunkerPrefab, bp, Quaternion.identity, g);
                     else
                     {
                         var acc = new MeshAccumulator();
@@ -806,8 +836,11 @@ namespace Redbaron
             return c;
         }
 
+        /// <summary>Carves the building out of the NavMesh. A building with its own BoxCollider on the root (the dressings' structures) uses that box.</summary>
         static void AddObstacle(GameObject go, Vector3 size, Vector3 center)
         {
+            var bc = go.GetComponent<BoxCollider>();
+            if (bc != null) { size = bc.size; center = bc.center; }
             var ob = GetOrAdd<NavMeshObstacle>(go);
             ob.shape = NavMeshObstacleShape.Box;
             ob.size = size; ob.center = center;
@@ -863,6 +896,7 @@ namespace Redbaron
                         var pf = pool[Mathf.FloorToInt(rng.Next() * pool.Length) % pool.Length];
                         tree = Instantiate(pf, p, Quaternion.Euler(0, yaw, 0), g);
                         FitHeight(tree, hgt);
+                        PhoneSafeColliders(tree);
                         if (canopyColliders) AddCanopy(tree, p, hgt, dead);
                     }
                     else
@@ -943,6 +977,7 @@ namespace Redbaron
                             rock = Instantiate(pf, p, Quaternion.Euler(0, rng.Next() * 360, 0), g);
                             FitHeight(rock, rockHeight);
                             rock.transform.localScale = Vector3.Scale(rock.transform.localScale, new Vector3(w * 1.6f, 1, w * 1.3f));
+                            PhoneSafeColliders(rock);
                         }
                         else
                         {
@@ -966,6 +1001,7 @@ namespace Redbaron
         {
             // Stretches of up to four spans, each its own object, so a blast cuts the wire where it lands (Breakable).
             var g = Group("Alambrada");
+            if (Dressing != null && Dressing.BuildWire(this, g)) return;
             var acc = new MeshAccumulator();
             int spans = 0, n = 0;
             void Close()
@@ -1035,7 +1071,11 @@ namespace Redbaron
             var markups = new List<NavMeshBuildMarkup>();
             if (waterBlockers == null) waterBlockers = Root.Find("Agua_BloqueoNavMesh");
             if (waterBlockers != null) markups.Add(new NavMeshBuildMarkup { root = waterBlockers, overrideArea = true, area = 1 });
-            foreach (var scenery in new[] { "Decorado", "Pared_Rocas" })
+            // Scenery the NavMesh must not read: decoration, and anything whose meshes are not readable on a phone.
+            var ignored = new List<string> { "Decorado", "Pared_Rocas" };
+            if (Dressing == null) Dressing = GetComponent<MapDressing>();
+            if (Dressing != null) ignored.AddRange(Dressing.NavMeshIgnoredGroups);
+            foreach (var scenery in ignored)
             {
                 var sr = Root.Find(scenery);
                 if (sr != null) markups.Add(new NavMeshBuildMarkup { root = sr, ignoreFromBuild = true });

@@ -41,8 +41,20 @@ namespace Redbaron
         public static float WorldL => DesignL * K;
         public const float WallHeight = 28f;
         public const float WaterLevel = -0.9f;
-        public const float TrenchWidth = 2.0f, TrenchDepth = 1.3f;
+        public const float TrenchWidth = 2.0f;
+        /// <summary>Cross-section of the trench cut in the terrain (m): depth, half-width at full depth, half-width where
+        /// the cut ends, length of the ramp where a lane crosses, and how high above the floor a soldier fires from.
+        /// The classic map uses the web prototype's numbers; a MapDressing (the WWI map) sets its own with SetTrenchProfile.</summary>
+        public static float TrenchDepth = 1.3f, TrenchFull = 2.3f, TrenchRamp = 3.6f, TrenchCutLen = 1.5f, TrenchEye = 1.55f;
+        /// <summary>Amplitude of the trench lines' zigzag (design m). 0 = straight lines, for dressings made of straight modular pieces.</summary>
+        public static float TrenchZigzag = 1.6f;
         public static readonly float[] TrenchLines = { 26f, 137f };
+
+        public static void SetTrenchProfile(float depth, float full, float ramp, float cutLen, float eye, float zigzag = 1.6f)
+        {
+            TrenchDepth = depth; TrenchFull = full; TrenchRamp = Mathf.Max(ramp, full + 0.1f); TrenchCutLen = Mathf.Max(0.1f, cutLen); TrenchEye = eye; TrenchZigzag = zigzag;
+        }
+        public static void ResetTrenchProfile() => SetTrenchProfile(1.3f, 2.3f, 3.6f, 1.5f, 1.55f, 1.6f);
 
         // Líneas en la mitad norte (X, Zm). La mitad sur es su reflejo.
         public static readonly Vector2[][] Lanes =
@@ -90,7 +102,7 @@ namespace Redbaron
         static float G(float d, float s) => Mathf.Exp(-(d * d) / (s * s));
         static float Hyp(float a, float b) => Mathf.Sqrt(a * a + b * b);
         public static float Tri(float u) => Mathf.Abs(u - Mathf.Floor(u + 0.5f)) * 2f - 0.5f;
-        public static float TrenchZ(float baseZ, float X) => baseZ + 1.6f * Tri(X / 5f);
+        public static float TrenchZ(float baseZ, float X) => baseZ + TrenchZigzag * Tri(X / 5f);
 
         static float SegDist(float px, float pz, Vector2 a, Vector2 b)
         {
@@ -157,8 +169,8 @@ namespace Redbaron
             float h0 = h;
             float dT = 1e9f;
             foreach (var b in TrenchLines) dT = Mathf.Min(dT, Mathf.Abs(Zm - TrenchZ(b, X)) * 0.842f * K);
-            float laneCut = Mathf.Clamp01((ld * K - LaneClear) / 1.5f); // no trench across a lane, with a ramp to it
-            float trd = (dT < 2.3f ? 1f : dT < 3.6f ? (3.6f - dT) / 1.3f : 0f) * laneCut;
+            float laneCut = Mathf.Clamp01((ld * K - LaneClear) / TrenchCutLen); // no trench across a lane, with a ramp to it
+            float trd = (dT < TrenchFull ? 1f : dT < TrenchRamp ? (TrenchRamp - dT) / (TrenchRamp - TrenchFull) : 0f) * laneCut;
             h -= TrenchDepth * trd;
             return new MapSample { h = h, h0 = h0, laneDist = ld, trench = trd, mountain = m, wet = wet, zm = Zm };
         }

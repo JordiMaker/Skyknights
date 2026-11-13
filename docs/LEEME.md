@@ -768,3 +768,28 @@ Every lane can be walked by every unit type, infantry and vehicles alike, and th
 **Immortal.** DemoFPS → Immortal (on by default, also a toggle on the panel): your own player (the offline one, or the avatar you own) takes no damage: the AI's hits are dropped and its FPS health is kept full against other players' bullets.
 
 **Controls.** WASD moves, the mouse aims, left click fires, right click zooms, R reloads, Space jumps, Shift sprints, V switches first and third person, Escape the menu.
+
+## WWI map: POLYGON War Map dressing (added 2026-11-13)
+
+`Assets/Redbaron/Scenes/Redbaron_WWI.unity` is the battle scene with the same lanes, bases, bunkers, water and bridges, dressed with Synty's **POLYGON War Map** pack (Asset Store, by Synty Studios; imported in `Assets/Synty`, which is not in the repository). It is mission 04, "Tierra de nadie", in the main menu, and in the build settings after the battle scene.
+
+**How it works: MapDressing.** `Scripts/Map/MapDressing.cs` is a component that sits next to RedbaronMapBuilder and takes over parts of the build: `Configure` (trench profile and palette, before anything is built), `BuildTrenches`, `BuildWire`, `BuildCommandPost`, `BuildBunker`, `DressAirfield` and `Dress` (everything else, last), plus `NavMeshIgnoredGroups`. Each hook can decline, and the classic low-poly part is built instead. The battle scene has no dressing; the WWI scene has `WwiDressing`, whose prefab lists are set in the scene (nothing from the pack is referenced by the kit's code).
+
+**What WwiDressing places.**
+- *Trenches:* the terrain cut is deeper and narrower than the classic one (`RedbaronMap.SetTrenchProfile`: 2.1 m deep, 1.1 m half-width, ramp to 2.1 m, a 3.2 m ramp where a lane crosses, and the lines are straight: `TrenchZigzag` 0, because the 6.3 m wide pieces only chain on a straight line). One `SM_Env_Trench_Deep_Straight` piece per segment, sunk 0.45 m so its outer skirt meets the ground; every seventh piece is a dugout or an insert; fire steps, ladders and duckboards inside. The Trinchera CoverPoints sit on the terrain floor. A soldier in a trench fires from 2.75 m above the floor (`RedbaronMap.TrenchEye`), just over the parapet; the classic map keeps 1.55 m.
+- *Wire:* `SM_Prop_Wire_Fence` pieces laid end to end along the wire lines, with tangles beside them, each one a Breakable like the classic stretches. The lanes stay open.
+- *No man's land:* ten wrecks (tanks, planes, a gun) and a crashed airship (`SM_Veh_Blimp_01_Destroyed_01` at 60 %, between the centre and east lanes) as directional cover and obstacles; 36 dirt mounds and 14 sandbag barricades per side as low cover; water decals scaled into the larger shell holes.
+- *Rear:* two artillery batteries per side behind the rear trench (two guns each, with crates and sacks), iron sheets and planks behind the trench lines.
+- *Bunkers:* a machine-gun nest: sandbags in a U, the side's heavy machine gun on its tripod, four poles and ten corrugated iron sheets. Same box as the classic bunker, so Bunker and Health work unchanged.
+- *Command post:* a 10 × 7.5 m hut of `SM_Bld_Base_Wall` pieces with a door towards the enemy, windows at the sides, ceiling tiles, three sandbag walls in front and the side's flag (built with MeshAccumulator as a child).
+- *Airfields:* a parked plane (Fokker for the Central Powers, Sopwith for the Entente), a tank in reserve and two anti-aircraft guns per side, away from the runway and the flak tower.
+- *Builder look fields* in the scene: Synty trees, dead trees, rocks, cliffs for the boundary wall, grass and base props; mud from design Z 92 instead of 106.
+
+**Phone rules learned here.**
+- Synty's meshes are not Read/Write. The runtime NavMesh bake cannot read such a mesh collider in a player, so every prop gets box colliders (`WwiDressing.Solid`) or none (`Decor`), and `RedbaronMapBuilder.PhoneSafeColliders` now swaps any non-readable mesh collider on trees, rocks and mountain rocks for a box. The trench pieces keep their mesh colliders for the line of fire but their group (`WWI_Trincheras`, with `WWI_Decorado`) is left out of the NavMesh: soldiers walk the terrain cut under them.
+- Do not enable GPU instancing on Synty's materials: their Built-in Shader Graph shaders then draw nothing but shadows (every piece vanished until it was switched off again).
+- The pack's shader graphs have Built-in and URP targets, so they work in this project without conversion; its demo scenes are not used.
+
+**Lines of fire.** The first version halved the shooting: box colliders over a wrecked plane's whole bounds (3 m tall, 8.7 m wide) and 1.5–1.9 m barricades blocked the lines of fire across no man's land, and soldiers kept leaving cover to find one (`SoldierAI.LineMoves` 922 against 100 on the classic map after ten minutes at 4×). Now wrecks, guns, parked planes and the airship get hull-high boxes only (`SolidLow`, 1.2–2.5 m) and no CoverPoint, barricades are squashed to 1.1 m like the classic rocks, and the trench eye is 3.0 m. Same test afterwards: 854 shots and 414 line moves against the classic map's 1062 and 100; the rest comes from the deeper trench cut itself.
+
+**Testing.** `scratchpad/wwi_probe.cs` (group counts, lane paths for both NavMeshes, trench covers reachable), `wwi_battle.cs` (states, trench cover use, shots, line moves) and `wwi_los.cs` (what blocks each shooter's line of fire, by map group). Redbaron > Vista previa del mapa builds the dressed map in the Editor without Play, which is the quickest way to look at it.

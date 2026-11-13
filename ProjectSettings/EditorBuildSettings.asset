@@ -11,5 +11,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Redbaron/Scenes/Redbaron_QuickRTS.unity
     guid: 633c4c50be76f448992f19047e7441bb
+  - enabled: 1
+    path: Assets/Redbaron/Scenes/Redbaron_WWI.unity
+    guid: 2ca26f506b9e3414eb3650f35543cdb5
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 289c1b55c9541489481df5cc06664110, type: 3}

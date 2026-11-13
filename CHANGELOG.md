@@ -13,6 +13,7 @@
 - The cliff around the map is built from complete low-poly rock models, with no more see-through gaps (#8).
 - Mountain rocks keep their collisions in the phone build (#7).
 - An anti-aircraft tower stands beside each side's command post. It fires flak at enemy planes in reach. Planes fly over it, and bombs destroy it.
+- A second map, **Redbaron_WWI** (mission 04, "Tierra de nadie"): the same front dressed with the POLYGON War Map pack. Real trench pieces with plank walls, fire steps and ladders over a deeper cut, barbed-wire fences, sandbag barricades and dirt mounds as cover, puddles in the shell holes, wrecked tanks and planes and a crashed airship in no man's land, artillery batteries behind the rear trench, machine-gun nests under corrugated iron for bunkers, a hut with sandbags for the command post, and a plane, a tank and anti-aircraft guns by each airfield. The map builder takes a MapDressing component for this kind of alternative look.
 
 **Colours**
 - The hangar ships come from the Redbaron colour kit. Each ship has colour zones and carries both insignias.

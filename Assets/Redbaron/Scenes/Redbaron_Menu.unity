@@ -155,6 +155,7 @@ MonoBehaviour:
   - {fileID: 11400000, guid: bacd2ffaf7ba6410cab3a6fa6c5cdb06, type: 2}
   - {fileID: 11400000, guid: 107c40824a99d4c6ba4618508bd41b1d, type: 2}
   - {fileID: 11400000, guid: 32d13a5db6f5a49db93468a4e9bde259, type: 2}
+  - {fileID: 11400000, guid: b2114aa60036049aea032a78955938a9, type: 2}
   buildingMaterial: {fileID: 2100000, guid: b5b7c657d7a1d47b4a1c66c33085c467, type: 2}
   buildingSide: 1
 --- !u!4 &602828312
