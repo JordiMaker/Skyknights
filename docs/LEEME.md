@@ -708,6 +708,8 @@ Two rigged mechs from the Asset Store fight alongside the kit's units: **Mech bl
 
 **Recovered after the imports.** Importing *The Assault Mech* and *Giant Mech Pilot* (`Assets/Robot&Pilot`) removed a file that defined the `InputManager` class the Ultimate Joystick Lite reads from (GUID collision); `Assets/UltimateJoystickLite/Core/Scripts/InputManager.cs` now stands in with a wrapper over `UnityEngine.Input`, and the joystick's custom inspector (`Core/Editor/Editor.cs`, which needed a `FormatGames.Editor` namespace that is gone too) was taken out.
 
+**Player builds after the imports.** Two packages use Editor-only API in runtime scripts and broke the Android build: Candice AI for Games now sits in an Editor-only assembly (`Assets/Candice AI for Games/CandiceAI.EditorOnly.asmdef`, with references to TextMeshPro, UI, Input System, Cinemachine and Post Processing), so it is left out of players; the Ultimate Joystick's `MenuManager.cs` is wrapped in `#if UNITY_EDITOR`. The APK is about 74 MB now: the two mechs bring 4K textures.
+
 **Statistics panel.** RedbaronGame's panel starts folded to a + button (Panel Open off) so it never covers the phone's joystick; − folds it back.
 
 ## Terrain and bridges sized for every unit (added 2026-11-13)
