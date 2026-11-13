@@ -33,6 +33,10 @@ namespace Redbaron
         public float walkSpeed = 2.6f, runSpeed = 3.6f;
         [Tooltip("Vehicles taller than this are scaled down (m), so they stay below the planes' flight plane.")]
         public float maxHeight = 6f;
+        [Tooltip("For rigged models (Asset Store mechs): the Animator controller with a Speed float (0 standing, 1 walking). Kit models leave it empty.")]
+        public RuntimeAnimatorController animator;
+        [Tooltip("Rigged models only: degrees to turn the model so that it faces the unit's forward (+Z).")]
+        public float lookYaw;
 
         [Header("Weapon")]
         public WeaponKind weapon = WeaponKind.Rifle;
@@ -66,7 +70,7 @@ namespace Redbaron
         /// For scenes that hold an older roster: UnitType.SyncStats(spawner.unitTypes).</summary>
         public void CopyStatsFrom(UnitType o)
         {
-            unitClass = o.unitClass; minCount = o.minCount; maxCount = o.maxCount;
+            unitClass = o.unitClass; minCount = o.minCount; maxCount = o.maxCount; lookYaw = o.lookYaw;
             hp = o.hp; walkSpeed = o.walkSpeed; runSpeed = o.runSpeed; maxHeight = o.maxHeight;
             weapon = o.weapon; range = o.range; cooldown = o.cooldown; shots = o.shots; hit = o.hit; damage = o.damage; splash = o.splash;
             recruitCount = o.recruitCount; recruitEvery = o.recruitEvery;
@@ -113,6 +117,9 @@ namespace Redbaron
             Vehicle("Mech ligero", UnitClass.Mech, 16, 2.4f, WeaponKind.Grenade, 34, 3.2f, 1, 0.55f, 2, 3f, 40f),            // Tetera: grenade launcher
             Vehicle("Mech explorador", UnitClass.Mech, 16, 3.4f, WeaponKind.Flak, 60, 2.2f, 1, 0.4f, 1, 2f, 40f),            // Zancudo: anti-aircraft
             Vehicle("Mech de asalto", UnitClass.Mech, 34, 1.8f, WeaponKind.Cannon, 45, 4f, 1, 0.5f, 3, 3f, 50f),             // Caldera
+            // Asset Store mechs (rigged FBX, animated by their own controllers: see the scene's roster for models and controller).
+            Vehicle("Mech blindado", UnitClass.Mech, 44, 1.5f, WeaponKind.Cannon, 48, 4.5f, 1, 0.5f, 4, 3f, 60f),            // The Assault Mech (Triplebrick)
+            Vehicle("Mech táctico", UnitClass.Mech, 18, 3f, WeaponKind.MachineGun, 45, 2.4f, 4, 0.3f, 1, 0, 40f),             // Stylized Sci Fi Mech (RetroStyle)
         };
 
         /// <summary>Kit model file for each default type, per side (soldiers change helmet, vehicles are only repainted).</summary>
@@ -139,6 +146,7 @@ namespace Redbaron
         {
             "Fusilero", "Tanque ligero", "Granadero", "Mech ligero", "Ametrallador", "Tanqueta lanzallamas",
             "Lanzallamas", "Mech explorador", "Zapador", "Tanque pesado", "Fusilero", "Mech de asalto",
+            "Granadero", "Mech blindado", "Ametrallador", "Mech táctico",
         };
     }
 }

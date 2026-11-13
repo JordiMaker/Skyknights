@@ -17,6 +17,8 @@ namespace Redbaron
         public Team playerTeam = Team.Entente;
         public float restartDelay = 12f;
         public bool showPanel = true;
+        [Tooltip("The statistics panel starts folded to a + button, so it does not cover the controls; the button unfolds it.")]
+        public bool panelOpen = false;
         [Tooltip("Keys for game speed x1, x2 and x4. Quick RTS uses 0-9 for control groups, so its scenes use F5/F6/F7.")]
         public KeyCode[] speedKeys = { KeyCode.Alpha1, KeyCode.Alpha2, KeyCode.Alpha3 };
         [Tooltip("G sends all your troops forward and H makes them all hold. Off in scenes with their own RTS controls (AITestBench).")]
@@ -131,8 +133,18 @@ namespace Redbaron
                 label = new GUIStyle(GUI.skin.label) { fontSize = 13, normal = { textColor = new Color(0.93f, 0.9f, 0.82f) } };
                 small = new GUIStyle(label) { fontSize = 11, normal = { textColor = new Color(0.71f, 0.68f, 0.59f) } };
             }
+            // Folded: only a small + button, so the panel never covers the flight controls.
+            if (!panelOpen)
+            {
+                if (GUI.Button(new Rect(12, 12, 34, 30), "+")) panelOpen = true;
+                GUI.matrix = Matrix4x4.identity;
+                return;
+            }
             GUILayout.BeginArea(new Rect(12, 12, 320, 250), box);
+            GUILayout.BeginHorizontal();
             GUILayout.Label("REDBARON · " + MissionSession.Title.ToUpperInvariant(), small);
+            if (GUILayout.Button("−", GUILayout.Width(28))) panelOpen = false;
+            GUILayout.EndHorizontal();
             Bar("Mando Centrales", CommandPost.Of(Team.Centrales), Team.Centrales.FlagColor());
             Bar("Mando Entente", CommandPost.Of(Team.Entente), Team.Entente.FlagColor());
             int nc = 0, ne = 0;
@@ -144,6 +156,7 @@ namespace Redbaron
             if (MobileFlightControls.Active) GUILayout.Label("Joystick: ↔ alabear · ↕ velocidad · FUEGO · BOMBA · CÁM cámaras", small);
             else GUILayout.Label($"Velocidad x{Time.timeScale:0} ({SpeedKeysText()}) · G avanzar · H quedarse · {(RedbaronCameras.Instance != null ? RedbaronCameras.Instance.KeysText : "")} cámaras", small);
             GUILayout.EndArea();
+            GUI.matrix = Matrix4x4.identity;
         }
 
         string SpeedKeysText()

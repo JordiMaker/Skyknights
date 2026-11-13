@@ -151,7 +151,7 @@ namespace Redbaron
             UnitModels.Look look = null;
             var looks = type == null ? null : t == Team.Centrales ? type.modelsCentrales : type.modelsEntente;
             if (looks != null && looks.Length > 0)
-                look = UnitModels.Apply(go, looks[Random.Range(0, looks.Length)], t, kitMaterial, type.maxHeight, vehicle);
+                look = UnitModels.Apply(go, looks[Random.Range(0, looks.Length)], t, kitMaterial, type.maxHeight, vehicle, type.animator, type.lookYaw);
             if (soldierHeight > 0 && !vehicle) RedbaronMapBuilder.FitHeight(go, soldierHeight);
             ai.SetLook(look);
 

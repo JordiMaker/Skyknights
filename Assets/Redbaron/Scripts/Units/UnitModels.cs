@@ -58,9 +58,12 @@ namespace Redbaron
         // ------------------------------------------------------------ Apply
         /// <summary>Replaces the unit's look with model. Vehicles taller than maxHeight are scaled down (0 = keep the size).
         /// Returns null, leaving the unit untouched, if the model cannot be used.</summary>
-        public static Look Apply(GameObject unit, GameObject model, Team team, Material material, float maxHeight, bool vehicle)
+        public static Look Apply(GameObject unit, GameObject model, Team team, Material material, float maxHeight, bool vehicle, RuntimeAnimatorController controller = null, float lookYaw = 0f)
         {
-            if (model == null || material == null) return null;
+            if (model == null) return null;
+            // A rigged model (an Asset Store mech with an Animator) is placed as it is and animated, not baked.
+            if (model.GetComponentInChildren<SkinnedMeshRenderer>(true) != null) return ApplyAnimated(unit, model, team, maxHeight, vehicle, controller, lookYaw);
+            if (material == null) return null;
             var baked = Bake(model, team);
             if (baked == null) return null;
             var root = unit.transform;
@@ -117,6 +120,74 @@ namespace Redbaron
             }
             if (made.ContainsKey("Torreta") || made.ContainsKey("Torso")) result.aim = look.gameObject.AddComponent<UnitAim>();
 
+            if (outline != null && OutlineRenderers != null)
+            {
+                var keep = new List<Renderer>();
+                if (OutlineRenderers.GetValue(outline) is Renderer[] old) foreach (var r in old) if (r != null) keep.Add(r);
+                keep.AddRange(renderers);
+                OutlineRenderers.SetValue(outline, keep.ToArray());
+                OutlineNormals?.Invoke(outline, null);
+                if (outlined) outline.enabled = true;
+            }
+            return result;
+        }
+
+        /// <summary>An animated look: the prefab or FBX instanced under the unit, scaled down to maxHeight, tinted with the side's
+        /// colour, with the given controller on its Animator and an AnimatedLook driving its "Speed" from the unit's movement.
+        /// Its body turns as a whole towards the target (SoldierAI faces it): no turret.</summary>
+        static Look ApplyAnimated(GameObject unit, GameObject model, Team team, float maxHeight, bool vehicle, RuntimeAnimatorController controller, float lookYaw)
+        {
+            var root = unit.transform;
+            var outline = unit.GetComponent<Outline>();
+            bool outlined = outline != null && outline.enabled;
+            if (outlined) outline.enabled = false;
+            var ai = unit.GetComponent<SoldierAI>();
+            if (ai != null) ai.DropAnimator();
+            foreach (var a in unit.GetComponentsInChildren<Animator>(true)) Object.DestroyImmediate(a);
+            var bones = new HashSet<Transform>();
+            foreach (var smr in unit.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            {
+                if (smr.rootBone != null) bones.Add(TopChild(root, smr.rootBone));
+                if (smr.gameObject == unit) Object.DestroyImmediate(smr);
+                else bones.Add(TopChild(root, smr.transform));
+            }
+            foreach (var b in bones) if (b != null && b != root) Object.DestroyImmediate(b.gameObject);
+
+            var inst = Object.Instantiate(model);
+            inst.name = "Modelo_" + model.name;
+            foreach (var mb in inst.GetComponentsInChildren<MonoBehaviour>(true)) if (!(mb is AnimatedLook)) Object.DestroyImmediate(mb); // the pack's demo scripts
+            foreach (var c in inst.GetComponentsInChildren<Collider>(true)) Object.DestroyImmediate(c);
+            inst.transform.position = Vector3.zero; inst.transform.rotation = Quaternion.identity;
+            var renderers = new List<Renderer>(inst.GetComponentsInChildren<Renderer>(true));
+            Bounds b0 = new Bounds(Vector3.zero, Vector3.zero); bool first = true;
+            foreach (var r in renderers) { if (first) { b0 = r.bounds; first = false; } else b0.Encapsulate(r.bounds); }
+            float k = vehicle && maxHeight > 0 && b0.size.y > maxHeight ? maxHeight / b0.size.y : 1f;
+            Vector3 s = root.lossyScale;
+            inst.transform.SetParent(root, false);
+            inst.transform.localPosition = Vector3.zero; inst.transform.localRotation = Quaternion.Euler(0f, lookYaw, 0f); // models that face another way than +Z
+            inst.transform.localScale = new Vector3(k / Mathf.Max(1e-4f, s.x), k / Mathf.Max(1e-4f, s.y), k / Mathf.Max(1e-4f, s.z)) * inst.transform.localScale.x;
+
+            // The side's colour over the pack's textures.
+            var mpb = new MaterialPropertyBlock();
+            Color tint = Color.Lerp(Color.white, team.FlagColor(), 0.55f); // the side's colour, strong enough to tell the sides apart
+            foreach (var r in renderers)
+            {
+                r.GetPropertyBlock(mpb);
+                mpb.SetColor("_Color", tint); mpb.SetColor("_BaseColor", tint);
+                r.SetPropertyBlock(mpb);
+                r.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
+            }
+
+            var anim = inst.GetComponent<Animator>();
+            if (anim == null) anim = inst.AddComponent<Animator>();
+            if (controller != null) anim.runtimeAnimatorController = controller;
+            anim.applyRootMotion = false;
+            anim.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            var drive = inst.AddComponent<AnimatedLook>();
+            drive.animator = anim;
+            drive.walkSpeed = ai != null && ai.Type != null ? ai.Type.walkSpeed : 2f;
+
+            var result = new Look { size = b0.size * k, center = (b0.center - Vector3.zero) * k };
             if (outline != null && OutlineRenderers != null)
             {
                 var keep = new List<Renderer>();

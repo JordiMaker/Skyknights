@@ -837,6 +837,8 @@ MonoBehaviour:
     walkSpeed: 2.6
     runSpeed: 3.6
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 0
     range: 50
     cooldown: 3.25
@@ -858,6 +860,8 @@ MonoBehaviour:
     walkSpeed: 2.3
     runSpeed: 3.3
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 1
     range: 45
     cooldown: 4.5
@@ -879,6 +883,8 @@ MonoBehaviour:
     walkSpeed: 2.6
     runSpeed: 3.6
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 2
     range: 26
     cooldown: 5
@@ -900,6 +906,8 @@ MonoBehaviour:
     walkSpeed: 2.4
     runSpeed: 3.4
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 3
     range: 12
     cooldown: 2.4
@@ -921,6 +929,8 @@ MonoBehaviour:
     walkSpeed: 2.6
     runSpeed: 3.6
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 4
     range: 4.5
     cooldown: 8
@@ -942,6 +952,8 @@ MonoBehaviour:
     walkSpeed: 2.2
     runSpeed: 2.64
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 5
     range: 45
     cooldown: 4.5
@@ -963,6 +975,8 @@ MonoBehaviour:
     walkSpeed: 2.6
     runSpeed: 3.1200001
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 3
     range: 14
     cooldown: 1.8
@@ -984,6 +998,8 @@ MonoBehaviour:
     walkSpeed: 1.6
     runSpeed: 1.9200001
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 5
     range: 50
     cooldown: 5
@@ -1005,6 +1021,8 @@ MonoBehaviour:
     walkSpeed: 2.4
     runSpeed: 2.88
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 2
     range: 34
     cooldown: 3.2
@@ -1026,6 +1044,8 @@ MonoBehaviour:
     walkSpeed: 3.4
     runSpeed: 4.0800004
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 6
     range: 60
     cooldown: 2.2
@@ -1047,6 +1067,8 @@ MonoBehaviour:
     walkSpeed: 1.8
     runSpeed: 2.16
     maxHeight: 6
+    animator: {fileID: 0}
+    lookYaw: 0
     weapon: 5
     range: 45
     cooldown: 4
@@ -1056,6 +1078,52 @@ MonoBehaviour:
     splash: 3
     recruitCount: 1
     recruitEvery: 50
+  - name: Mech blindado
+    unitClass: 2
+    modelsEntente:
+    - {fileID: 5279269097534734806, guid: 87ee01aa6314b41709740ebf0942745e, type: 3}
+    modelsCentrales:
+    - {fileID: 5279269097534734806, guid: 87ee01aa6314b41709740ebf0942745e, type: 3}
+    minCount: 1
+    maxCount: 1
+    hp: 44
+    walkSpeed: 1.5
+    runSpeed: 1.8000001
+    maxHeight: 6
+    animator: {fileID: 9100000, guid: 2adc96aefda8a40de8a90e0ac000692d, type: 2}
+    lookYaw: 0
+    weapon: 5
+    range: 48
+    cooldown: 4.5
+    shots: 1
+    hit: 0.5
+    damage: 4
+    splash: 3
+    recruitCount: 1
+    recruitEvery: 60
+  - name: "Mech t\xE1ctico"
+    unitClass: 2
+    modelsEntente:
+    - {fileID: 3347155603281033640, guid: 3afb34c3f4ada27478a3799186b8946e, type: 3}
+    modelsCentrales:
+    - {fileID: 3347155603281033640, guid: 3afb34c3f4ada27478a3799186b8946e, type: 3}
+    minCount: 1
+    maxCount: 1
+    hp: 18
+    walkSpeed: 3
+    runSpeed: 3.6000001
+    maxHeight: 6
+    animator: {fileID: 9100000, guid: 3fcb16f3d134143a3ad84b138a6e7719, type: 2}
+    lookYaw: 0
+    weapon: 1
+    range: 45
+    cooldown: 2.4
+    shots: 4
+    hit: 0.3
+    damage: 1
+    splash: 0
+    recruitCount: 1
+    recruitEvery: 40
   rotation:
   - Fusilero
   - Tanque ligero
@@ -1069,6 +1137,10 @@ MonoBehaviour:
   - Tanque pesado
   - Fusilero
   - Mech de asalto
+  - Granadero
+  - Mech blindado
+  - Ametrallador
+  - "Mech t\xE1ctico"
   laneStep: 4
   squads:
     breakAtLoss: 0.5
@@ -1101,6 +1173,7 @@ MonoBehaviour:
   playerTeam: 1
   restartDelay: 12
   showPanel: 0
+  panelOpen: 0
   speedKeys: 1e0100001f01000020010000i
   globalOrderKeys: 1
   lastEvent: Las oleadas salen de las bases
@@ -1118,6 +1191,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::Redbaron.RedbaronMapBuilder
   buildOnAwake: 1
   bakeNavMeshOnAwake: 1
+  vehicleAgentRadius: 2.7
+  vehicleAgentHeight: 4.6
+  vehicleAgentSlope: 32
+  vehicleAgentClimb: 0.9
+  bridgeWidth: 9
   seed: 1916
   groundLayer: 15
   groundTag: Terrain

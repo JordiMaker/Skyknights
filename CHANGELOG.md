@@ -62,6 +62,12 @@
   - nobody charges with a squad that has lost a quarter of its men.
 - Your squads holding a position for you never fall back on their own.
 
+**Two Asset Store mechs join the roster**
+- "Mech blindado" is Triplebrick's The Assault Mech (heavy cannon, 44 points, slow) and "Mech táctico" is RetroStyle's Stylized Sci Fi Mech (machine guns, fast). Both are rigged FBX models with their own walking animations, driven by the unit's speed, tinted in the side's colour, and on the vehicles' NavMesh. They take their turn in the waves and have recruit buttons.
+- Rigged models are a second kind of look (UnitModels.ApplyAnimated): the unit type names the model, an Animator controller with a Speed float and, if needed, a yaw correction.
+- The statistics panel of the battle starts folded to a small + button, so it never covers the flight controls; − folds it again.
+- Housekeeping after the imports: The Assault Mech's old Post Processing copy (same GUIDs as the official package) was taken out, and the Ultimate Joystick's missing InputManager class restored as a wrapper.
+
 **Terrain and bridges sized for every unit**
 - Vehicles walk their own NavMesh, baked for the widest of them (radius 2.7 m, slope 32°, step 0.9 m), so tanks and mechs only take routes their size allows. Infantry keeps its 0.4 m mesh.
 - Every lane is passable by every unit: the bridges are 9 m wide (were 5.5 and 3.6), the ford has two rows of stepping stones, the mountain passes are wider, and the trenches stop 5.5 m short of each lane with a ramp (were 3.6 m), which is also how far the ground is flattened along the lanes.

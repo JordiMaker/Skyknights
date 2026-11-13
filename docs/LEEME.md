@@ -695,6 +695,21 @@ Every unit still advances along its lane, takes cover, moves up from cover to co
 
 **About Low Poly Shooter Pack - Free Sample (Infima Games).** It was checked for this scene and not imported. It has no enemy AI: it is a first-person player controller with weapons, pop-up targets and explosive barrels. It needs the new Input System and Post Processing, and it ships its own ProjectSettings and Packages/manifest.json.
 
+## Asset Store mechs as units (added 2026-11-13)
+
+Two rigged mechs from the Asset Store fight alongside the kit's units: **Mech blindado** (Triplebrick, *The Assault Mech*, `Assets/Mech`) and **Mech táctico** (RetroStyle Games, *Stylized Sci Fi Mech Robot*, `Assets/RSG_UnderWater_Pack`). Neither package is in the repository.
+
+**Rigged looks (UnitModels.ApplyAnimated).** A unit type whose model has a SkinnedMeshRenderer is not baked: the prefab or FBX is instanced under the unit, scaled down to Max Height, stripped of the pack's scripts and colliders, tinted with the side's flag colour (55 %, `_Color`/`_BaseColor` property block), and its Animator gets the type's **Animator** controller. `AnimatedLook` feeds the controller's `Speed` float with the agent's speed over the type's walking speed. The whole body turns towards the target (no turret). **Look Yaw** turns a model that does not face +Z. The two controllers (`Assets/Redbaron/Animation/Mech_Asalto.controller`, `Mech_ISO.controller`) are a 1D blend tree, idle at 0 and walk at 1 (the Assault Mech also runs at 1.8).
+
+**What each package needed.**
+- *The Assault Mech*: its FBX comes with no materials, so `Assets/Redbaron/Prefabs/P_MechBlindado.prefab` is the FBX with its `Mech_Metal` material. Its `PostProcessing` folder is the old stack v1 with the same GUIDs as `com.unity.postprocessing`; it was removed (the mech does not use it, its demo scenes do). Its demo scripts move the mech by root motion and are stripped at spawn.
+- *Stylized Sci Fi Mech*: an HDRP package. `Assets/Redbaron/Animation/M_ISO_Mech_Standard.mat` is a Standard material from its textures (albedo, normal, HDRP mask map as metallic/smoothness, emission), set on its prefab's renderers. Its walk and idle clips come as separate FBX files; Loop Time is on.
+- Both types are in `UnitType.Defaults()` and at the end of the default rotation; the scene rosters hold their models and controllers (set by a script, like the rest).
+
+**Recovered after the imports.** Importing *The Assault Mech* and *Giant Mech Pilot* (`Assets/Robot&Pilot`) removed a file that defined the `InputManager` class the Ultimate Joystick Lite reads from (GUID collision); `Assets/UltimateJoystickLite/Core/Scripts/InputManager.cs` now stands in with a wrapper over `UnityEngine.Input`, and the joystick's custom inspector (`Core/Editor/Editor.cs`, which needed a `FormatGames.Editor` namespace that is gone too) was taken out.
+
+**Statistics panel.** RedbaronGame's panel starts folded to a + button (Panel Open off) so it never covers the phone's joystick; − folds it back.
+
 ## Terrain and bridges sized for every unit (added 2026-11-13)
 
 Every lane can be walked by every unit type, infantry and vehicles alike, and the map is built so.

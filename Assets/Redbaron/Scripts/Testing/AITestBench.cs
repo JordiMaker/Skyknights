@@ -66,6 +66,7 @@ namespace Redbaron
         {
             "Fusilero", "Ametrallador", "Granadero", "Lanzallamas", "Zapador",
             "Tanque ligero", "Tanqueta lanzallamas", "Tanque pesado", "Mech ligero", "Mech explorador", "Mech de asalto",
+            "Mech blindado", "Mech táctico",
         };
 
         // ------------------------------------------------------------ Setup
